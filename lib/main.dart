@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sapi/Login.dart';
+import 'package:sapi/Administrador/InicioAdmin.dart';
+import 'package:sapi/Padre/alumno/InicioAlumno.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,9 +15,14 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'SAPI',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(useMaterial3: true, fontFamily: 'Roboto'),
-      home: const Login(),
-      routes: {Login.routeName: (_) => const Login()},
+      initialRoute: Login.routeName,
+      routes: {
+        Login.routeName: (_) => const Login(),
+        InicioAdmin.routeName: (_) => const InicioAdmin(),
+        InicioAlumno.routeName: (_) => const InicioAlumno(),
+      },
     );
   }
 }

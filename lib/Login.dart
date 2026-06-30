@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sapi/Administrador/InicioAdmin.dart';
+import 'package:sapi/Padre/alumno/InicioAlumno.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -17,6 +19,16 @@ class _LoginState extends State<Login> {
   bool _obscurePassword = true;
   bool _isLoading = false;
 
+  // ----------------------------------------------------------------
+  // CREDENCIALES TEMPORALES (solo diseño, sin conexión a BD todavía)
+  // Usuario admin   -> usuario: admin   | contraseña: admin123
+  // Usuario alumno  -> usuario: alumno  | contraseña: alumno123
+  // ----------------------------------------------------------------
+  static const String _adminUser = 'admin';
+  static const String _adminPassword = 'admin123';
+  static const String _alumnoUser = 'alumno';
+  static const String _alumnoPassword = 'alumno123';
+
   @override
   void dispose() {
     _userController.dispose();
@@ -28,11 +40,28 @@ class _LoginState extends State<Login> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
-
-    // TODO: conectar con tu lógica de autenticación
     await Future.delayed(const Duration(seconds: 1));
 
+    final user = _userController.text.trim();
+    final password = _passwordController.text.trim();
+
     setState(() => _isLoading = false);
+
+    if (user == _adminUser && password == _adminPassword) {
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, InicioAdmin.routeName);
+    } else if (user == _alumnoUser && password == _alumnoPassword) {
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, InicioAlumno.routeName);
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Usuario o contraseña incorrectos'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
   }
 
   @override
@@ -52,7 +81,7 @@ class _LoginState extends State<Login> {
                   // Logo / título
                   Icon(
                     Icons.church_outlined,
-                    size: 56,
+                    size: 100,
                     color: Colors.yellow[700],
                   ),
                   const SizedBox(height: 16),
@@ -128,7 +157,7 @@ class _LoginState extends State<Login> {
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: () {
-                        // TODO: navegar a recuperar contraseña
+                        // TODO: pantalla de recuperación de contraseña
                       },
                       child: const Text('¿Olvidaste tu contraseña?'),
                     ),
@@ -142,23 +171,14 @@ class _LoginState extends State<Login> {
                       backgroundColor: Colors.yellow[700],
                       padding: const EdgeInsets.symmetric(vertical: 18),
                     ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Color.fromARGB(255, 0, 0, 0),
-                            ),
-                          )
-                        : const Text(
-                            'Iniciar sesión',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                    child: const Text(
+                      'Iniciar sesión',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 16),
                 ],

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:sapi/Login.dart';
 
-class InicioAdmin extends StatelessWidget {
-  const InicioAdmin({super.key});
+class InicioAlumno extends StatelessWidget {
+  const InicioAlumno({super.key});
 
-  static get routeName => '/InicioAdmin';
+  static get routeName => '/InicioAlumno';
 
   void _cerrarSesion(BuildContext context) {
-    Navigator.pushReplacementNamed(context, '/login');
+    Navigator.pushReplacementNamed(context, Login.routeName);
   }
 
   @override
@@ -20,7 +20,6 @@ class InicioAdmin extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ----- AppBar personalizada -----
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -42,7 +41,7 @@ class InicioAdmin extends StatelessWidget {
                     ],
                   ),
                   const Text(
-                    'Panel Principal',
+                    'Bienvenid@',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   IconButton(
@@ -57,12 +56,12 @@ class InicioAdmin extends StatelessWidget {
 
               // ----- Saludo -----
               const Text(
-                'Hola, Catequista',
+                'Hola, Nombre del Alumno',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 4),
               const Text(
-                'Gestiona la información y consulta la asistencia.',
+                'Gestión de Asistencia',
                 style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
               const SizedBox(height: 24),
@@ -74,9 +73,9 @@ class InicioAdmin extends StatelessWidget {
                     Row(
                       children: [
                         Expanded(
-                          child: _MenuCard(
-                            icon: Icons.people_alt,
-                            label: 'Usuarios',
+                          child: MenuCard(
+                            icon: Icons.camera_alt_outlined,
+                            label: 'Registrar Asistencia',
                             onTap: () {
                               // TODO: pon aquí tu ruta a Usuarios
                               // Navigator.pushNamed(context, '/usuarios');
@@ -85,9 +84,9 @@ class InicioAdmin extends StatelessWidget {
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: _MenuCard(
-                            icon: Icons.groups,
-                            label: 'Grupos',
+                          child: MenuCard(
+                            icon: Icons.calendar_today_outlined,
+                            label: 'Calendario de Asistencias',
                             onTap: () {
                               // TODO: pon aquí tu ruta a Grupos
                               // Navigator.pushNamed(context, '/grupos');
@@ -100,45 +99,18 @@ class InicioAdmin extends StatelessWidget {
                     Row(
                       children: [
                         Expanded(
-                          child: _MenuCard(
-                            icon: Icons.fact_check,
-                            label: 'Asistencias',
+                          child: MenuCard(
+                            icon: Icons.history_outlined,
+                            label: 'Historial de Asistencias',
                             onTap: () {
                               // TODO: pon aquí tu ruta a Asistencias
                               // Navigator.pushNamed(context, '/asistencias');
                             },
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _MenuCard(
-                            icon: Icons.description,
-                            label: 'Reportes',
-                            onTap: () {
-                              // TODO: pon aquí tu ruta a Reportes
-                              // Navigator.pushNamed(context, '/reportes');
-                            },
-                          ),
-                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(flex: 1, child: Container()),
-                        Expanded(
-                          child: _MenuCard(
-                            icon: Icons.calendar_today,
-                            label: 'Calendario',
-                            onTap: () {
-                              // TODO: pon aquí tu ruta a Calendario
-                              // Navigator.pushNamed(context, '/calendario');
-                            },
-                          ),
-                        ),
-                        Expanded(flex: 1, child: Container()),
-                      ],
-                    ),
                   ],
                 ),
               ),
@@ -150,12 +122,14 @@ class InicioAdmin extends StatelessWidget {
   }
 }
 
-class _MenuCard extends StatelessWidget {
+/// Tarjeta reutilizable de menú (compartida entre paneles)
+class MenuCard extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
 
-  const _MenuCard({
+  const MenuCard({
+    super.key,
     required this.icon,
     required this.label,
     required this.onTap,
