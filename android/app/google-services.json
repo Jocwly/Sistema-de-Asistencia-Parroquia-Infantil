@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "589187819234",
+    "project_id": "sapi-d015a",
+    "storage_bucket": "sapi-d015a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:589187819234:android:b29d9b9a60009f8fa660bb",
+        "android_client_info": {
+          "package_name": "com.example.sapi"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDKNzsIqhlFDWc2SNtoJgVPFrNLUK9qmgk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
