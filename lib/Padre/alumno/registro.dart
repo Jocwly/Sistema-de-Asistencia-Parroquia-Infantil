@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sapi/styles/form_styles.dart';
@@ -17,9 +18,25 @@ class _RegistroState extends State<Registro> {
 
   final _nombreController = TextEditingController();
   final _edadController = TextEditingController();
-  final _grupoController = TextEditingController();
   final _correoController = TextEditingController();
   final _passwordController = TextEditingController();
+
+  String? _grupoSeleccionado;
+
+  final List<String> _grupos = [
+    '1A',
+    '1B',
+    '2A',
+    '2B',
+    '3A',
+    '3B',
+    '4A',
+    '4B',
+    '5A',
+    '5B',
+    '6A',
+    '6B',
+  ];
 
   bool _obscurePassword = true;
   bool _isLoading = false;
@@ -28,7 +45,6 @@ class _RegistroState extends State<Registro> {
   void dispose() {
     _nombreController.dispose();
     _edadController.dispose();
-    _grupoController.dispose();
     _correoController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -53,7 +69,7 @@ class _RegistroState extends State<Registro> {
             'uid': credential.user!.uid,
             'nombre': _nombreController.text.trim(),
             'edad': int.parse(_edadController.text.trim()),
-            'grupo': _grupoController.text.trim(),
+            'grupo': _grupoSeleccionado,
             'correo': _correoController.text.trim(),
             'rol': 'alumno',
             'fechaRegistro': FieldValue.serverTimestamp(),
@@ -77,7 +93,7 @@ class _RegistroState extends State<Registro> {
       } else if (e.code == 'invalid-email') {
         mensaje = 'Correo inválido';
       } else if (e.code == 'weak-password') {
-        mensaje = 'La contraseña es muy débil';
+        mensaje = 'La contraseña debe tener mínimo 8 caracteres';
       }
 
       if (!mounted) return;
@@ -98,10 +114,18 @@ class _RegistroState extends State<Registro> {
         ),
       );
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  bool _correoValido(String correo) {
+    final regex = RegExp(r'^[\w\.-]+@[\w\.-]+\.\w{2,}$');
+    return regex.hasMatch(correo);
+  }
+
+  bool _nombreValido(String nombre) {
+    final regex = RegExp(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$');
+    return regex.hasMatch(nombre);
   }
 
   @override
@@ -131,15 +155,26 @@ class _RegistroState extends State<Registro> {
 
                   TextFormField(
                     controller: _nombreController,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r"[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]"),
+                      ),
+                    ],
+                    textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
                       labelText: "Nombre",
                       prefixIcon: Icon(Icons.person),
                       border: LoginStyles.inputBorder,
                     ),
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
+                      if (value == null || value.trim().isEmpty) {
                         return "Ingresa tu nombre";
                       }
+
+                      if (!_nombreValido(value.trim())) {
+                        return "El nombre no debe contener números";
+                      }
+
                       return null;
                     },
                   ),
@@ -149,6 +184,11 @@ class _RegistroState extends State<Registro> {
                   TextFormField(
                     controller: _edadController,
                     keyboardType: TextInputType.number,
+                    textInputAction: TextInputAction.next,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(2),
+                    ],
                     decoration: const InputDecoration(
                       labelText: "Edad",
                       prefixIcon: Icon(Icons.cake),
@@ -157,6 +197,10 @@ class _RegistroState extends State<Registro> {
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return "Ingresa tu edad";
+                      }
+
+                      if (value.length != 2) {
+                        return "La edad debe tener 2 dígitos";
                       }
 
                       final edad = int.tryParse(value);
@@ -171,16 +215,24 @@ class _RegistroState extends State<Registro> {
 
                   const SizedBox(height: LoginStyles.fieldSpacing),
 
-                  TextFormField(
-                    controller: _grupoController,
+                  DropdownButtonFormField<String>(
+                    value: _grupoSeleccionado,
                     decoration: const InputDecoration(
                       labelText: "Grupo",
                       prefixIcon: Icon(Icons.groups),
                       border: LoginStyles.inputBorder,
                     ),
+                    items: _grupos.map((grupo) {
+                      return DropdownMenuItem(value: grupo, child: Text(grupo));
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _grupoSeleccionado = value;
+                      });
+                    },
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return "Ingresa el grupo";
+                        return "Selecciona un grupo";
                       }
                       return null;
                     },
@@ -191,17 +243,18 @@ class _RegistroState extends State<Registro> {
                   TextFormField(
                     controller: _correoController,
                     keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
                       labelText: "Correo electrónico",
                       prefixIcon: Icon(Icons.email_outlined),
                       border: LoginStyles.inputBorder,
                     ),
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
+                      if (value == null || value.trim().isEmpty) {
                         return "Ingresa un correo";
                       }
 
-                      if (!value.contains("@")) {
+                      if (!_correoValido(value.trim())) {
                         return "Correo inválido";
                       }
 
@@ -214,6 +267,7 @@ class _RegistroState extends State<Registro> {
                   TextFormField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
+                    textInputAction: TextInputAction.done,
                     decoration: InputDecoration(
                       labelText: "Contraseña",
                       prefixIcon: const Icon(Icons.lock),
@@ -236,8 +290,8 @@ class _RegistroState extends State<Registro> {
                         return "Ingresa una contraseña";
                       }
 
-                      if (value.length < 6) {
-                        return "Mínimo 6 caracteres";
+                      if (value.length < 8) {
+                        return "Mínimo 8 caracteres";
                       }
 
                       return null;

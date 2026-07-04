@@ -5,6 +5,7 @@ import 'firebase_options.dart';
 import 'package:sapi/Login.dart';
 import 'package:sapi/Administrador/InicioAdmin.dart';
 import 'package:sapi/Padre/alumno/InicioAlumno.dart';
+import 'package:sapi/Padre/alumno/registrar_asistencia.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,6 +28,7 @@ class MyApp extends StatelessWidget {
         InicioAdmin.routeName: (_) => const InicioAdmin(),
         InicioAlumno.routeName: (_) => const InicioAlumno(),
         Registro.routeName: (_) => const Registro(),
+        RegistrarAsistencia.routeName: (_) => const RegistrarAsistencia(),
       },
     );
   }

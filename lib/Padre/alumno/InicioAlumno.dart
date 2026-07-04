@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sapi/Login.dart';
+import 'package:sapi/Padre/alumno/registrar_asistencia.dart';
 
 class InicioAlumno extends StatelessWidget {
   const InicioAlumno({super.key});
@@ -77,8 +78,10 @@ class InicioAlumno extends StatelessWidget {
                             icon: Icons.camera_alt_outlined,
                             label: 'Registrar Asistencia',
                             onTap: () {
-                              // TODO: pon aquí tu ruta a Usuarios
-                              // Navigator.pushNamed(context, '/usuarios');
+                              Navigator.pushNamed(
+                                context,
+                                RegistrarAsistencia.routeName,
+                              );
                             },
                           ),
                         ),
