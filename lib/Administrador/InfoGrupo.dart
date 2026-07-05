@@ -6,14 +6,8 @@ import 'package:sapi/styles/InfoGrupostyles.dart';
 class InfoGrupo extends StatelessWidget {
   final String grupo;
   final String catequista;
-  final String horario;
 
-  const InfoGrupo({
-    super.key,
-    required this.grupo,
-    required this.catequista,
-    required this.horario,
-  });
+  const InfoGrupo({super.key, required this.grupo, required this.catequista});
 
   @override
   Widget build(BuildContext context) {
@@ -31,11 +25,7 @@ class InfoGrupo extends StatelessWidget {
                 padding: GruposStyles.screenPadding,
                 child: Column(
                   children: [
-                    _InfoGrupoCard(
-                      catequista: catequista,
-                      horario: horario,
-                      grupo: grupo,
-                    ),
+                    _InfoGrupoCard(catequista: catequista, grupo: grupo),
 
                     const SizedBox(height: 16),
 
@@ -74,9 +64,7 @@ class _HeaderDetalle extends StatelessWidget {
             onPressed: () => Navigator.pop(context),
           ),
           Expanded(
-            child: Center(
-              child: Text(titulo, style: GruposStyles.title),
-            ),
+            child: Center(child: Text(titulo, style: GruposStyles.title)),
           ),
           const SizedBox(width: 48),
         ],
@@ -87,14 +75,10 @@ class _HeaderDetalle extends StatelessWidget {
 
 class _InfoGrupoCard extends StatelessWidget {
   final String catequista;
-  final String horario;
+
   final String grupo;
 
-  const _InfoGrupoCard({
-    required this.catequista,
-    required this.horario,
-    required this.grupo,
-  });
+  const _InfoGrupoCard({required this.catequista, required this.grupo});
 
   @override
   Widget build(BuildContext context) {
@@ -114,10 +98,7 @@ class _InfoGrupoCard extends StatelessWidget {
 
               _InfoRow(label: 'Catequista', value: catequista),
               const Divider(height: 22),
-
-              _InfoRow(label: 'Horario', value: horario),
-              const Divider(height: 22),
-
+              
               _InfoRow(
                 label: 'Alumnos inscritos',
                 value: totalAlumnos.toString(),
@@ -134,10 +115,7 @@ class _InfoRow extends StatelessWidget {
   final String label;
   final String value;
 
-  const _InfoRow({
-    required this.label,
-    required this.value,
-  });
+  const _InfoRow({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -187,10 +165,7 @@ class _AlumnosCard extends StatelessWidget {
                   final nombre = data['nombre'] ?? 'Sin nombre';
                   final edad = data['edad']?.toString() ?? '-';
 
-                  return _AlumnoItem(
-                    nombre: nombre,
-                    edad: edad,
-                  );
+                  return _AlumnoItem(nombre: nombre, edad: edad);
                 }).toList(),
               );
             },
@@ -205,10 +180,7 @@ class _AlumnoItem extends StatelessWidget {
   final String nombre;
   final String edad;
 
-  const _AlumnoItem({
-    required this.nombre,
-    required this.edad,
-  });
+  const _AlumnoItem({required this.nombre, required this.edad});
 
   @override
   Widget build(BuildContext context) {

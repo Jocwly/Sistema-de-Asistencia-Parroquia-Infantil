@@ -18,9 +18,7 @@ class GestionGrupos extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            _Header(
-              onAdd: () => _mostrarFormularioAgregarGrupo(context),
-            ),
+            _Header(onAdd: () => _mostrarFormularioAgregarGrupo(context)),
 
             Expanded(
               child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -46,12 +44,11 @@ class GestionGrupos extends StatelessWidget {
                       final data = grupos[index].data();
                       final grupo = data['grupo'] ?? '';
                       final catequista = data['catequista'] ?? '';
-                      final horario = data['horario'] ?? 'Domingos 9:00 AM';
 
                       return _GrupoCard(
                         grupo: grupo,
                         catequista: catequista,
-                        horario: horario,
+
                         onTap: () {
                           Navigator.push(
                             context,
@@ -59,7 +56,6 @@ class GestionGrupos extends StatelessWidget {
                               builder: (_) => InfoGrupo(
                                 grupo: grupo,
                                 catequista: catequista,
-                                horario: horario,
                               ),
                             ),
                           );
@@ -113,10 +109,7 @@ class GestionGrupos extends StatelessWidget {
                           DropdownMenuItem(value: 'B', child: Text('B')),
                           DropdownMenuItem(value: 'C', child: Text('C')),
                           DropdownMenuItem(value: 'D', child: Text('D')),
-                          DropdownMenuItem(
-                            value: 'Otro',
-                            child: Text('Otro'),
-                          ),
+                          DropdownMenuItem(value: 'Otro', child: Text('Otro')),
                         ],
                         onChanged: (value) {
                           setState(() {
@@ -219,14 +212,9 @@ class _Header extends StatelessWidget {
             onPressed: () => Navigator.pop(context),
           ),
           Expanded(
-            child: Center(
-              child: Text('Grupos', style: GruposStyles.title),
-            ),
+            child: Center(child: Text('Grupos', style: GruposStyles.title)),
           ),
-          IconButton(
-            icon: const Icon(Icons.add, size: 34),
-            onPressed: onAdd,
-          ),
+          IconButton(icon: const Icon(Icons.add, size: 34), onPressed: onAdd),
         ],
       ),
     );
@@ -236,13 +224,13 @@ class _Header extends StatelessWidget {
 class _GrupoCard extends StatelessWidget {
   final String grupo;
   final String catequista;
-  final String horario;
+
   final VoidCallback onTap;
 
   const _GrupoCard({
     required this.grupo,
     required this.catequista,
-    required this.horario,
+
     required this.onTap,
   });
 
@@ -282,18 +270,8 @@ class _GrupoCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Grupo $grupo',
-                            style: GruposStyles.cardTitle,
-                          ),
-                          Text(
-                            catequista,
-                            style: GruposStyles.normal,
-                          ),
-                          Text(
-                            horario,
-                            style: GruposStyles.normal,
-                          ),
+                          Text('Grupo $grupo', style: GruposStyles.cardTitle),
+                          Text(catequista, style: GruposStyles.normal),
                         ],
                       ),
                     ),
