@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:sapi/Administrador/GestionGrupos.dart';
 import 'package:sapi/Padre/alumno/registro.dart';
 import 'firebase_options.dart';
 import 'package:sapi/Login.dart';
@@ -29,6 +30,7 @@ class MyApp extends StatelessWidget {
         InicioAlumno.routeName: (_) => const InicioAlumno(),
         Registro.routeName: (_) => const Registro(),
         RegistrarAsistencia.routeName: (_) => const RegistrarAsistencia(),
+        GestionGrupos.routeName: (_) => const GestionGrupos(),
       },
     );
   }

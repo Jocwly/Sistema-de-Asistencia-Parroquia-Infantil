@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sapi/Administrador/GestionGrupos.dart';
 import 'package:sapi/Login.dart';
 
 class InicioAdmin extends StatelessWidget {
@@ -67,30 +68,20 @@ class InicioAdmin extends StatelessWidget {
               ),
               const SizedBox(height: 24),
 
-              // ----- Cuadrícula de opciones -----
+              //Cuadrícula de opciones
               Expanded(
                 child: Column(
                   children: [
                     Row(
                       children: [
-                        Expanded(
-                          child: _MenuCard(
-                            icon: Icons.people_alt,
-                            label: 'Usuarios',
-                            onTap: () {
-                              // TODO: pon aquí tu ruta a Usuarios
-                              // Navigator.pushNamed(context, '/usuarios');
-                            },
-                          ),
-                        ),
                         const SizedBox(width: 16),
+                        //GRUPOS
                         Expanded(
                           child: _MenuCard(
                             icon: Icons.groups,
                             label: 'Grupos',
                             onTap: () {
-                              // TODO: pon aquí tu ruta a Grupos
-                              // Navigator.pushNamed(context, '/grupos');
+                              Navigator.pushNamed(context, GestionGrupos.routeName);
                             },
                           ),
                         ),
