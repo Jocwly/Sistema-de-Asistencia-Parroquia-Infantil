@@ -55,7 +55,6 @@ class InicioAlumno extends StatelessWidget {
               ),
               const SizedBox(height: 24),
 
-              // ----- Saludo -----
               const Text(
                 'Hola, Nombre del Alumno',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),

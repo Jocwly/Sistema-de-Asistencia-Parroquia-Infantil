@@ -23,21 +23,6 @@ class _RegistroState extends State<Registro> {
 
   String? _grupoSeleccionado;
 
-  final List<String> _grupos = [
-    '1A',
-    '1B',
-    '2A',
-    '2B',
-    '3A',
-    '3B',
-    '4A',
-    '4B',
-    '5A',
-    '5B',
-    '6A',
-    '6B',
-  ];
-
   bool _obscurePassword = true;
   bool _isLoading = false;
 
@@ -215,26 +200,52 @@ class _RegistroState extends State<Registro> {
 
                   const SizedBox(height: LoginStyles.fieldSpacing),
 
-                  DropdownButtonFormField<String>(
-                    value: _grupoSeleccionado,
-                    decoration: const InputDecoration(
-                      labelText: "Grupo",
-                      prefixIcon: Icon(Icons.groups),
-                      border: LoginStyles.inputBorder,
-                    ),
-                    items: _grupos.map((grupo) {
-                      return DropdownMenuItem(value: grupo, child: Text(grupo));
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _grupoSeleccionado = value;
-                      });
-                    },
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return "Selecciona un grupo";
+                  StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                    stream: FirebaseFirestore.instance
+                        .collection('grupos')
+                        .orderBy('grupo')
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
                       }
-                      return null;
+
+                      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                        return const Text(
+                          'No hay grupos disponibles. Pide al admin que agregue uno.',
+                        );
+                      }
+
+                      final grupos = snapshot.data!.docs;
+
+                      return DropdownButtonFormField<String>(
+                        value: _grupoSeleccionado,
+                        decoration: const InputDecoration(
+                          labelText: "Grupo",
+                          prefixIcon: Icon(Icons.groups),
+                          border: LoginStyles.inputBorder,
+                        ),
+                        items: grupos.map((doc) {
+                          final data = doc.data();
+                          final grupo = data['grupo']?.toString() ?? '';
+
+                          return DropdownMenuItem<String>(
+                            value: grupo,
+                            child: Text('Grupo $grupo'),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _grupoSeleccionado = value;
+                          });
+                        },
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return "Selecciona un grupo";
+                          }
+                          return null;
+                        },
+                      );
                     },
                   ),
 
