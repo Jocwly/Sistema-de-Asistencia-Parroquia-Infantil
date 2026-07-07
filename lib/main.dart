@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:sapi/Administrador/GestionGrupos.dart';
+import 'package:sapi/Padre/alumno/calendario.dart';
+import 'package:sapi/Padre/alumno/historial.dart';
 import 'package:sapi/Padre/alumno/registro.dart';
 import 'firebase_options.dart';
 import 'package:sapi/Login.dart';
@@ -31,6 +33,8 @@ class MyApp extends StatelessWidget {
         Registro.routeName: (_) => const Registro(),
         RegistrarAsistencia.routeName: (_) => const RegistrarAsistencia(),
         GestionGrupos.routeName: (_) => const GestionGrupos(),
+        Calendario.routeName: (_) => const Calendario(),
+        MiHistorial.routeName: (_) => const MiHistorial(),
       },
     );
   }

@@ -79,7 +79,11 @@ class _RegistrarAsistenciaState extends State<RegistrarAsistencia> {
                         const SizedBox(height: 10),
 
                         _PhotoCard(
-                          emoji: '🌅',
+                          icon: Icon(
+                            Icons.church,
+                            size: 25,
+                            color: Colors.black87,
+                          ),
                           title: 'Antes de la Misa',
                           description:
                               'Toma una foto antes de entrar a la iglesia',
@@ -91,7 +95,11 @@ class _RegistrarAsistenciaState extends State<RegistrarAsistencia> {
                         const SizedBox(height: 10),
 
                         _PhotoCard(
-                          emoji: '⛪',
+                          icon: Icon(
+                            Icons.access_time,
+                            size: 25,
+                            color: Colors.black87,
+                          ),
                           title: 'Durante la Misa',
                           description:
                               'Toma una foto dentro de la iglesia durante la celebración',
@@ -104,7 +112,11 @@ class _RegistrarAsistenciaState extends State<RegistrarAsistencia> {
                         const SizedBox(height: 10),
 
                         _PhotoCard(
-                          emoji: '🙏',
+                          icon: Icon(
+                            Icons.church,
+                            size: 25,
+                            color: Colors.black87,
+                          ),
                           title: 'Al Finalizar',
                           description:
                               'Toma una foto al salir después de la misa',
@@ -219,7 +231,7 @@ class _ProgressCard extends StatelessWidget {
 }
 
 class _PhotoCard extends StatelessWidget {
-  final String emoji;
+  final Widget icon;
   final String title;
   final String description;
   final bool buttonEnabled;
@@ -227,7 +239,7 @@ class _PhotoCard extends StatelessWidget {
   final VoidCallback onTap;
 
   const _PhotoCard({
-    required this.emoji,
+    required this.icon,
     required this.title,
     required this.description,
     required this.buttonEnabled,
@@ -246,7 +258,7 @@ class _PhotoCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text(emoji, style: RegistrarAsistenciaStyles.cardEmoji),
+              icon,
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -274,7 +286,7 @@ class _PhotoCard extends StatelessWidget {
                 ? Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(emoji, style: RegistrarAsistenciaStyles.photoEmoji),
+                      icon,
                       const SizedBox(height: 5),
                       Text(
                         title,

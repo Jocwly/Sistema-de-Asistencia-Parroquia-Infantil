@@ -90,8 +90,7 @@ class InicioAlumno extends StatelessWidget {
                             icon: Icons.calendar_today_outlined,
                             label: 'Calendario de Asistencias',
                             onTap: () {
-                              // TODO: pon aquí tu ruta a Grupos
-                              // Navigator.pushNamed(context, '/grupos');
+                              Navigator.pushNamed(context, '/calendario');
                             },
                           ),
                         ),
@@ -105,8 +104,7 @@ class InicioAlumno extends StatelessWidget {
                             icon: Icons.history_outlined,
                             label: 'Historial de Asistencias',
                             onTap: () {
-                              // TODO: pon aquí tu ruta a Asistencias
-                              // Navigator.pushNamed(context, '/asistencias');
+                              Navigator.pushNamed(context, '/mi-historial');
                             },
                           ),
                         ),
