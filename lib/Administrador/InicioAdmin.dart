@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sapi/Administrador/Calendario.dart';
 import 'package:sapi/Administrador/GestionGrupos.dart';
 import 'package:sapi/Login.dart';
 
@@ -122,8 +123,10 @@ class InicioAdmin extends StatelessWidget {
                             icon: Icons.calendar_today,
                             label: 'Calendario',
                             onTap: () {
-                              // TODO: pon aquí tu ruta a Calendario
-                              // Navigator.pushNamed(context, '/calendario');
+                              Navigator.pushNamed(
+                                context,
+                                CalendarioAdmin.routeName,
+                              );
                             },
                           ),
                         ),
