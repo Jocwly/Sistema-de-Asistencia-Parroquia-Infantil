@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:sapi/Administrador/Calendario.dart';
+import 'package:sapi/Administrador/ControlAsistencia.dart';
 import 'package:sapi/Administrador/GestionGrupos.dart';
 import 'package:sapi/Padre/alumno/calendario.dart';
 import 'package:sapi/Padre/alumno/historial.dart';
@@ -37,6 +38,7 @@ class MyApp extends StatelessWidget {
         Calendario.routeName: (_) => const Calendario(),
         MiHistorial.routeName: (_) => const MiHistorial(),
         CalendarioAdmin.routeName: (_) => const CalendarioAdmin(),
+        ControlAsistencia.routeName: (_) => const ControlAsistencia(),
       },
     );
   }

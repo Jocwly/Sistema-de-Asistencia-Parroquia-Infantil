@@ -95,8 +95,10 @@ class InicioAdmin extends StatelessWidget {
                             icon: Icons.fact_check,
                             label: 'Asistencias',
                             onTap: () {
-                              // TODO: pon aquí tu ruta a Asistencias
-                              // Navigator.pushNamed(context, '/asistencias');
+                              Navigator.pushNamed(
+                                context,
+                                ControlAsistencia.routeName,
+                              );
                             },
                           ),
                         ),
