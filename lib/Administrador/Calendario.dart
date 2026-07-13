@@ -208,7 +208,6 @@ class _CalendarioAdminState extends State<CalendarioAdmin> {
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
-          backgroundColor: amarillo,
           foregroundColor: Colors.black,
           elevation: 0,
 
