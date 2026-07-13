@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sapi/styles/CalendarioAdminStyles.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CalendarioAdmin extends StatefulWidget {
   const CalendarioAdmin({super.key});
@@ -10,15 +12,11 @@ class CalendarioAdmin extends StatefulWidget {
 }
 
 class _CalendarioAdminState extends State<CalendarioAdmin> {
-  DateTime mesActual = DateTime(2026, 7);
+  DateTime mesActual = DateTime(DateTime.now().year, DateTime.now().month);
 
-  final Map<DateTime, String> misasEspeciales = {
-    DateTime(2026, 7, 10): 'Misa de confirmaciones',
-  };
-
-  static const Color amarillo = Color(0xFFFFD814);
-  static const Color amarilloClaro = Color(0xFFFFF7C7);
-  static const Color borde = Color(0xFFFFC400);
+  final CollectionReference<Map<String, dynamic>> _misasRef = FirebaseFirestore
+      .instance
+      .collection('misas_especiales');
 
   final List<String> nombresMeses = const [
     'Enero',
@@ -53,8 +51,14 @@ class _CalendarioAdminState extends State<CalendarioAdmin> {
     return fecha.weekday == DateTime.sunday;
   }
 
-  bool _esMisaEspecial(DateTime fecha) {
-    return misasEspeciales.containsKey(_normalizarFecha(fecha));
+  bool _esMisaEspecial(DateTime fecha, List<MisaEspecial> misas) {
+    final fechaNormalizada = _normalizarFecha(fecha);
+
+    return misas.any((misa) {
+      final fechaMisa = _normalizarFecha(misa.fecha);
+
+      return fechaMisa == fechaNormalizada;
+    });
   }
 
   void _mesAnterior() {
@@ -69,111 +73,241 @@ class _CalendarioAdminState extends State<CalendarioAdmin> {
     });
   }
 
-  Future<void> _seleccionarDia(DateTime fecha) async {
-    final fechaNormalizada = _normalizarFecha(fecha);
-    final controlador = TextEditingController(
-      text: misasEspeciales[fechaNormalizada] ?? '',
+  Future<void> _seleccionarDia(
+    DateTime fechaInicial, {
+    MisaEspecial? misaExistente,
+  }) async {
+    DateTime fechaSeleccionada = _normalizarFecha(
+      misaExistente?.fecha ?? fechaInicial,
     );
 
-    await showDialog(
+    final controlador = TextEditingController(
+      text: misaExistente?.nombre ?? '',
+    );
+
+    bool guardando = false;
+
+    await showDialog<void>(
       context: context,
       builder: (dialogContext) {
-        final yaExiste = misasEspeciales.containsKey(fechaNormalizada);
+        return StatefulBuilder(
+          builder: (context, actualizarDialogo) {
+            Future<void> elegirFecha() async {
+              final nuevaFecha = await showDatePicker(
+                context: dialogContext,
+                initialDate: fechaSeleccionada,
+                firstDate: DateTime(2020),
+                lastDate: DateTime(2100),
+                helpText: 'Selecciona la fecha de la misa',
+                cancelText: 'Cancelar',
+                confirmText: 'Seleccionar',
+              );
 
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-          title: Text(
-            yaExiste ? 'Editar misa especial' : 'Agregar misa especial',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '${fecha.day}/${fecha.month}/${fecha.year}',
-                style: const TextStyle(
-                  color: Colors.black54,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: controlador,
-                maxLength: 80,
-                decoration: InputDecoration(
-                  labelText: 'Nombre de la misa',
-                  hintText: 'Ej. Misa de confirmaciones',
-                  filled: true,
-                  fillColor: const Color(0xFFFFFDF2),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
+              if (nuevaFecha != null) {
+                actualizarDialogo(() {
+                  fechaSeleccionada = _normalizarFecha(nuevaFecha);
+                });
+              }
+            }
+
+            Future<void> guardarMisa() async {
+              final nombre = controlador.text.trim();
+
+              if (nombre.isEmpty) {
+                ScaffoldMessenger.of(this.context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Escribe el nombre de la misa.'),
                   ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: borde, width: 2),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            if (yaExiste)
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    misasEspeciales.remove(fechaNormalizada);
-                  });
+                );
+                return;
+              }
 
-                  Navigator.pop(dialogContext);
-                },
-                child: const Text(
-                  'Eliminar',
-                  style: TextStyle(color: Colors.red),
-                ),
-              ),
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: amarillo,
-                foregroundColor: Colors.black,
-                elevation: 0,
-              ),
-              onPressed: () {
-                final nombre = controlador.text.trim();
+              actualizarDialogo(() {
+                guardando = true;
+              });
 
-                if (nombre.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Escribe el nombre de la misa.'),
-                    ),
-                  );
-                  return;
+              try {
+                final datos = <String, dynamic>{
+                  'nombre': nombre,
+                  'fecha': Timestamp.fromDate(fechaSeleccionada),
+                  'actualizadoEn': FieldValue.serverTimestamp(),
+                };
+
+                if (misaExistente == null) {
+                  datos['creadoEn'] = FieldValue.serverTimestamp();
+
+                  await _misasRef.add(datos);
+                } else {
+                  await _misasRef.doc(misaExistente.id).update(datos);
                 }
 
-                setState(() {
-                  misasEspeciales[fechaNormalizada] = nombre;
-                });
+                if (!mounted) return;
 
                 Navigator.pop(dialogContext);
-              },
-              child: Text(yaExiste ? 'Guardar' : 'Agregar'),
-            ),
-          ],
+
+                setState(() {
+                  mesActual = DateTime(
+                    fechaSeleccionada.year,
+                    fechaSeleccionada.month,
+                  );
+                });
+
+                ScaffoldMessenger.of(this.context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      misaExistente == null
+                          ? 'Misa especial agregada.'
+                          : 'Misa especial actualizada.',
+                    ),
+                  ),
+                );
+              } on FirebaseException catch (error) {
+                actualizarDialogo(() {
+                  guardando = false;
+                });
+
+                if (!mounted) return;
+
+                ScaffoldMessenger.of(this.context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'No se pudo guardar la misa: ${error.message}',
+                    ),
+                  ),
+                );
+              }
+            }
+
+            Future<void> eliminarMisa() async {
+              if (misaExistente == null) return;
+
+              actualizarDialogo(() {
+                guardando = true;
+              });
+
+              try {
+                await _misasRef.doc(misaExistente.id).delete();
+
+                if (!mounted) return;
+
+                Navigator.pop(dialogContext);
+
+                ScaffoldMessenger.of(this.context).showSnackBar(
+                  const SnackBar(content: Text('Misa especial eliminada.')),
+                );
+              } on FirebaseException catch (error) {
+                actualizarDialogo(() {
+                  guardando = false;
+                });
+
+                if (!mounted) return;
+
+                ScaffoldMessenger.of(this.context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'No se pudo eliminar la misa: ${error.message}',
+                    ),
+                  ),
+                );
+              }
+            }
+
+            return AlertDialog(
+              shape: CalendarioAdminStyles.dialogShape,
+              title: Text(
+                misaExistente == null
+                    ? 'Agregar misa especial'
+                    : 'Editar misa especial',
+                style: CalendarioAdminStyles.dialogTitle,
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    InkWell(
+                      borderRadius: BorderRadius.circular(10),
+                      onTap: guardando ? null : elegirFecha,
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 14,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade400),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.calendar_month_outlined),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                '${fechaSeleccionada.day}/'
+                                '${fechaSeleccionada.month}/'
+                                '${fechaSeleccionada.year}',
+                                style: CalendarioAdminStyles.dialogDate,
+                              ),
+                            ),
+                            const Icon(Icons.arrow_drop_down),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: controlador,
+                      enabled: !guardando,
+                      maxLength: 80,
+                      textCapitalization: TextCapitalization.sentences,
+                      decoration: CalendarioAdminStyles.massInputDecoration(),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                if (misaExistente != null)
+                  TextButton(
+                    onPressed: guardando ? null : eliminarMisa,
+                    child: const Text(
+                      'Eliminar',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ),
+                TextButton(
+                  onPressed: guardando
+                      ? null
+                      : () {
+                          Navigator.pop(dialogContext);
+                        },
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  style: CalendarioAdminStyles.saveButtonStyle,
+                  onPressed: guardando ? null : guardarMisa,
+                  child: guardando
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(misaExistente == null ? 'Agregar' : 'Guardar'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
+
+    controlador.dispose();
   }
 
   List<DateTime?> _obtenerDiasCalendario() {
     final primerDia = DateTime(mesActual.year, mesActual.month, 1);
+
     final ultimoDia = DateTime(mesActual.year, mesActual.month + 1, 0);
 
-    // En Dart: lunes = 1 y domingo = 7.
     final espaciosIniciales = primerDia.weekday - 1;
 
     final List<DateTime?> dias = List<DateTime?>.filled(
@@ -181,6 +315,7 @@ class _CalendarioAdminState extends State<CalendarioAdmin> {
       null,
       growable: true,
     );
+
     for (int dia = 1; dia <= ultimoDia.day; dia++) {
       dias.add(DateTime(mesActual.year, mesActual.month, dia));
     }
@@ -188,131 +323,94 @@ class _CalendarioAdminState extends State<CalendarioAdmin> {
     return dias;
   }
 
-  List<MapEntry<DateTime, String>> _misasDelMes() {
-    final lista = misasEspeciales.entries.where((misa) {
-      return misa.key.year == mesActual.year &&
-          misa.key.month == mesActual.month;
+  List<MisaEspecial> _misasDelMes(List<MisaEspecial> misas) {
+    final lista = misas.where((misa) {
+      return misa.fecha.year == mesActual.year &&
+          misa.fecha.month == mesActual.month;
     }).toList();
 
-    lista.sort((a, b) => a.key.compareTo(b.key));
+    lista.sort((a, b) => a.fecha.compareTo(b.fecha));
 
     return lista;
   }
 
   @override
   Widget build(BuildContext context) {
-    final dias = _obtenerDiasCalendario();
-    final misasDelMes = _misasDelMes();
-
-    return Container(
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        appBar: AppBar(
-          foregroundColor: Colors.black,
-          elevation: 0,
-
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              Navigator.pop(context);
-            },
-          ),
-
-          title: const Text(
-            'Calendario de misas',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
+    return Scaffold(
+      backgroundColor: CalendarioAdminStyles.backgroundColor,
+      appBar: AppBar(
+        foregroundColor: Colors.black,
+        backgroundColor: CalendarioAdminStyles.backgroundColor,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pop(context);
+          },
         ),
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              children: [
-                _construirLeyenda(),
-                const SizedBox(height: 14),
-                _construirCalendario(dias),
-                const SizedBox(height: 14),
-                _construirMisasEspeciales(misasDelMes),
-              ],
-            ),
-          ),
+        title: const Text(
+          'Calendario de misas',
+          style: CalendarioAdminStyles.appBarTitle,
         ),
       ),
-    );
-  }
-
-  Widget _construirLeyenda() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        border: Border.all(color: borde),
-        borderRadius: BorderRadius.circular(15),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          _seleccionarDia(DateTime.now());
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('Nueva misa'),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Wrap(
-            spacing: 12,
-            runSpacing: 8,
-            children: [
-              _elementoLeyenda(
-                color: amarillo,
-                texto: 'Domingo (automático)',
-                relleno: true,
+      body: SafeArea(
+        child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: _misasRef.orderBy('fecha').snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    'No se pudieron cargar las misas.\n'
+                    '${snapshot.error}',
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              );
+            }
+
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            final misas =
+                snapshot.data?.docs.map(MisaEspecial.fromDocument).toList() ??
+                [];
+
+            final dias = _obtenerDiasCalendario();
+            final misasDelMes = _misasDelMes(misas);
+
+            return SingleChildScrollView(
+              padding: CalendarioAdminStyles.screenPadding,
+              child: Column(
+                children: [
+                  _construirLeyenda(),
+                  const SizedBox(height: 14),
+                  _construirCalendario(dias, misas),
+                  const SizedBox(height: 14),
+                  _construirMisasEspeciales(misasDelMes),
+                  const SizedBox(height: 90),
+                ],
               ),
-              _elementoLeyenda(
-                color: amarillo,
-                texto: 'Misa especial (admin)',
-                relleno: false,
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            'Toca cualquier día para agregar o quitar una misa especial. '
-            'Los domingos no se pueden desactivar.',
-            style: TextStyle(fontSize: 11, color: Color(0xFF9A7B00)),
-          ),
-        ],
+            );
+          },
+        ),
       ),
     );
   }
 
-  Widget _elementoLeyenda({
-    required Color color,
-    required String texto,
-    required bool relleno,
-  }) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 17,
-          height: 17,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: relleno ? color : Colors.white,
-            border: Border.all(color: color, width: 1.5),
-          ),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          texto,
-          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-        ),
-      ],
-    );
-  }
-
-  Widget _construirCalendario(List<DateTime?> dias) {
+  Widget _construirCalendario(List<DateTime?> dias, List<MisaEspecial> misas) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: borde),
-        borderRadius: BorderRadius.circular(15),
-      ),
+      padding: CalendarioAdminStyles.calendarioPadding,
+      decoration: CalendarioAdminStyles.cardDecoration,
       child: Column(
         children: [
           Row(
@@ -320,12 +418,10 @@ class _CalendarioAdminState extends State<CalendarioAdmin> {
               _botonMes(icono: Icons.chevron_left, onPressed: _mesAnterior),
               Expanded(
                 child: Text(
-                  '${nombresMeses[mesActual.month - 1]} de ${mesActual.year}',
+                  '${nombresMeses[mesActual.month - 1]} '
+                  'de ${mesActual.year}',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: CalendarioAdminStyles.monthTitle,
                 ),
               ),
               _botonMes(icono: Icons.chevron_right, onPressed: _mesSiguiente),
@@ -340,12 +436,8 @@ class _CalendarioAdminState extends State<CalendarioAdmin> {
                 child: Center(
                   child: Text(
                     dia,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: esDomingo
-                          ? const Color(0xFFD29E00)
-                          : Colors.black87,
+                    style: CalendarioAdminStyles.weekDayText(
+                      esDomingo: esDomingo,
                     ),
                   ),
                 ),
@@ -370,7 +462,7 @@ class _CalendarioAdminState extends State<CalendarioAdmin> {
                 return const SizedBox();
               }
 
-              return _construirDia(fecha);
+              return _construirDia(fecha, misas);
             },
           ),
         ],
@@ -380,48 +472,110 @@ class _CalendarioAdminState extends State<CalendarioAdmin> {
 
   Widget _botonMes({required IconData icono, required VoidCallback onPressed}) {
     return Material(
-      color: amarilloClaro,
+      color: CalendarioAdminStyles.amarilloClaro,
       shape: const CircleBorder(),
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: onPressed,
         child: SizedBox(
-          width: 38,
-          height: 38,
-          child: Icon(icono, color: const Color(0xFFD3A500)),
+          width: CalendarioAdminStyles.botonMesSize,
+          height: CalendarioAdminStyles.botonMesSize,
+          child: Icon(icono, color: CalendarioAdminStyles.iconoMes),
         ),
       ),
     );
   }
 
-  Widget _construirDia(DateTime fecha) {
+  Widget _construirLeyenda() {
+    return Container(
+      width: double.infinity,
+      padding: CalendarioAdminStyles.leyendaPadding,
+      decoration: CalendarioAdminStyles.leyendaDecoration,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            children: [
+              _elementoLeyenda(
+                color: CalendarioAdminStyles.amarillo,
+                texto: 'Domingo (automático)',
+                relleno: true,
+              ),
+              _elementoLeyenda(
+                color: CalendarioAdminStyles.amarillo,
+                texto: 'Misa especial (admin)',
+                relleno: false,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'Toca cualquier día para agregar, editar o eliminar una misa '
+            'especial. Los domingos aparecen automáticamente.',
+            style: CalendarioAdminStyles.leyendaDescription,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _elementoLeyenda({
+    required Color color,
+    required String texto,
+    required bool relleno,
+  }) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: CalendarioAdminStyles.indicadorLeyendaSize,
+          height: CalendarioAdminStyles.indicadorLeyendaSize,
+          decoration: CalendarioAdminStyles.indicadorLeyendaDecoration(
+            color: color,
+            relleno: relleno,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(texto, style: CalendarioAdminStyles.leyendaText),
+      ],
+    );
+  }
+
+  Widget _construirDia(DateTime fecha, List<MisaEspecial> misas) {
     final esDomingo = _esDomingo(fecha);
-    final esEspecial = _esMisaEspecial(fecha);
+    final esEspecial = _esMisaEspecial(fecha, misas);
+
+    MisaEspecial? misaDelDia;
+
+    for (final misa in misas) {
+      if (_normalizarFecha(misa.fecha) == _normalizarFecha(fecha)) {
+        misaDelDia = misa;
+        break;
+      }
+    }
 
     return InkWell(
       borderRadius: BorderRadius.circular(50),
-      onTap: () => _seleccionarDia(fecha),
+      onTap: () {
+        _seleccionarDia(fecha, misaExistente: misaDelDia);
+      },
       child: Center(
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          width: 38,
-          height: 38,
+          width: CalendarioAdminStyles.diaSize,
+          height: CalendarioAdminStyles.diaSize,
           alignment: Alignment.center,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: esDomingo ? amarillo : Colors.white,
-            border: esEspecial && !esDomingo
-                ? Border.all(color: borde, width: 1.5)
-                : null,
+          decoration: CalendarioAdminStyles.diaDecoration(
+            esDomingo: esDomingo,
+            esEspecial: esEspecial,
           ),
           child: Text(
             '${fecha.day}',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: esDomingo || esEspecial
-                  ? FontWeight.bold
-                  : FontWeight.w500,
-              color: Colors.black,
+            style: CalendarioAdminStyles.dayText(
+              esDomingo: esDomingo,
+              esEspecial: esEspecial,
             ),
           ),
         ),
@@ -429,16 +583,11 @@ class _CalendarioAdminState extends State<CalendarioAdmin> {
     );
   }
 
-  Widget _construirMisasEspeciales(
-    List<MapEntry<DateTime, String>> misasDelMes,
-  ) {
+  Widget _construirMisasEspeciales(List<MisaEspecial> misasDelMes) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        border: Border.all(color: borde),
-        borderRadius: BorderRadius.circular(15),
-      ),
+      padding: CalendarioAdminStyles.misasPadding,
+      decoration: CalendarioAdminStyles.leyendaDecoration,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -446,24 +595,17 @@ class _CalendarioAdminState extends State<CalendarioAdmin> {
             children: [
               const Text(
                 'Misas Especiales Programadas',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+                style: CalendarioAdminStyles.specialMassTitle,
               ),
               const SizedBox(width: 6),
               Container(
-                width: 20,
-                height: 20,
+                width: CalendarioAdminStyles.contadorSize,
+                height: CalendarioAdminStyles.contadorSize,
                 alignment: Alignment.center,
-                decoration: const BoxDecoration(
-                  color: amarilloClaro,
-                  shape: BoxShape.circle,
-                ),
+                decoration: CalendarioAdminStyles.contadorDecoration,
                 child: Text(
                   '${misasDelMes.length}',
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFFB08A00),
-                  ),
+                  style: CalendarioAdminStyles.counterText,
                 ),
               ),
             ],
@@ -475,7 +617,7 @@ class _CalendarioAdminState extends State<CalendarioAdmin> {
                 padding: EdgeInsets.symmetric(vertical: 8),
                 child: Text(
                   'Sin misas especiales programadas',
-                  style: TextStyle(fontSize: 12, color: Color(0xFFB08A00)),
+                  style: CalendarioAdminStyles.emptyMassText,
                 ),
               ),
             )
@@ -483,39 +625,47 @@ class _CalendarioAdminState extends State<CalendarioAdmin> {
             ...misasDelMes.map((misa) {
               return Container(
                 margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFFBE8),
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                padding: CalendarioAdminStyles.misaItemPadding,
+                decoration: CalendarioAdminStyles.misaItemDecoration,
                 child: Row(
                   children: [
                     Container(
-                      width: 35,
-                      height: 35,
+                      width: CalendarioAdminStyles.numeroMisaSize,
+                      height: CalendarioAdminStyles.numeroMisaSize,
                       alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: borde),
-                      ),
+                      decoration: CalendarioAdminStyles.numeroMisaDecoration(),
                       child: Text(
-                        '${misa.key.day}',
+                        '${misa.fecha.day}',
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: Text(
-                        misa.value,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            misa.nombre,
+                            style: CalendarioAdminStyles.massNameText,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${misa.fecha.day}/'
+                            '${misa.fecha.month}/'
+                            '${misa.fecha.year}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.black54,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     IconButton(
                       tooltip: 'Editar',
-                      onPressed: () => _seleccionarDia(misa.key),
+                      onPressed: () {
+                        _seleccionarDia(misa.fecha, misaExistente: misa);
+                      },
                       icon: const Icon(Icons.edit_outlined, size: 19),
                     ),
                   ],
@@ -524,6 +674,31 @@ class _CalendarioAdminState extends State<CalendarioAdmin> {
             }),
         ],
       ),
+    );
+  }
+}
+
+class MisaEspecial {
+  final String id;
+  final String nombre;
+  final DateTime fecha;
+
+  const MisaEspecial({
+    required this.id,
+    required this.nombre,
+    required this.fecha,
+  });
+
+  factory MisaEspecial.fromDocument(
+    QueryDocumentSnapshot<Map<String, dynamic>> documento,
+  ) {
+    final datos = documento.data();
+    final timestamp = datos['fecha'] as Timestamp?;
+
+    return MisaEspecial(
+      id: documento.id,
+      nombre: (datos['nombre'] as String?)?.trim() ?? 'Misa especial',
+      fecha: timestamp?.toDate() ?? DateTime.now(),
     );
   }
 }
