@@ -81,6 +81,24 @@ class _CalendarioState extends State<Calendario> {
       'Noviembre',
       'Diciembre',
     ];
+    return meses[month - 1];
+  }
+
+  String _nombreMesCorto(int month) {
+    const meses = [
+      'ene',
+      'feb',
+      'mar',
+      'abr',
+      'may',
+      'jun',
+      'jul',
+      'ago',
+      'sep',
+      'oct',
+      'nov',
+      'dic',
+    ];
 
     return meses[month - 1];
   }
@@ -140,15 +158,18 @@ class _CalendarioState extends State<Calendario> {
                   const SizedBox(height: 16),
 
                   ...domingos.map((domingo) {
+                    final nombreMes = _nombreMesCorto(domingo.month);
+
                     return FutureBuilder<String>(
+                      key: ValueKey(_fechaId(domingo)),
                       future: _obtenerEstadoMisa(domingo),
                       builder: (context, snapshot) {
                         final estado = snapshot.data ?? 'Pendiente';
 
                         return _MisaCard(
                           dia: domingo.day,
-                          fecha: '${domingo.day} jul',
-                          titulo: '${domingo.day} jul',
+                          //fecha: '${domingo.day} $nombreMes',
+                          titulo: '${domingo.day} $nombreMes',
                           estado: estado,
                         );
                       },
@@ -197,13 +218,13 @@ class _CalendarioState extends State<Calendario> {
 
 class _MisaCard extends StatelessWidget {
   final int dia;
-  final String fecha;
+  //final String fecha;
   final String titulo;
   final String estado;
 
   const _MisaCard({
     required this.dia,
-    required this.fecha,
+    //required this.fecha,
     required this.titulo,
     required this.estado,
   });

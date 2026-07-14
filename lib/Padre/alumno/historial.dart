@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class MiHistorial extends StatelessWidget {
   const MiHistorial({super.key});
@@ -30,11 +31,18 @@ class MiHistorial extends StatelessWidget {
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('asistencias')
-            .orderBy('fecha', descending: true)
+            .where(
+              'uidAlumno',
+              isEqualTo: FirebaseAuth.instance.currentUser!.uid,
+            )
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
@@ -43,7 +51,34 @@ class MiHistorial extends StatelessWidget {
             );
           }
 
-          final asistencias = snapshot.data!.docs;
+          final asistencias = snapshot.data!.docs.where((documento) {
+            final data = documento.data() as Map<String, dynamic>;
+
+            if (data['fecha'] == null || data['fecha'] is! Timestamp) {
+              return false;
+            }
+
+            final fecha = (data['fecha'] as Timestamp).toDate();
+
+            // Mostrar únicamente domingos
+            return fecha.weekday == DateTime.sunday;
+          }).toList();
+
+          asistencias.sort((a, b) {
+            final dataA = a.data() as Map<String, dynamic>;
+            final dataB = b.data() as Map<String, dynamic>;
+
+            final fechaA = (dataA['fecha'] as Timestamp).toDate();
+            final fechaB = (dataB['fecha'] as Timestamp).toDate();
+
+            return fechaB.compareTo(fechaA);
+          });
+
+          if (asistencias.isEmpty) {
+            return const Center(
+              child: Text('No hay misas dominicales registradas'),
+            );
+          }
 
           return ListView.builder(
             padding: const EdgeInsets.all(10),
@@ -52,25 +87,34 @@ class MiHistorial extends StatelessWidget {
               final data = asistencias[index].data() as Map<String, dynamic>;
 
               final DateTime fecha = (data['fecha'] as Timestamp).toDate();
-              final String grupo = data['grupo'] ?? 'Grupo A';
 
-              final String? fotoAntes = data['fotoAntes'];
-              final String? fotoDurante = data['fotoDurante'];
-              final String? fotoFinal = data['fotoFinal'];
+              final String grupo = data['grupo']?.toString() ?? 'Sin grupo';
 
-              final bool completa =
-                  fotoAntes != null && fotoDurante != null && fotoFinal != null;
+              final String? fotoAntes = data['fotoAntesUrl']?.toString();
+
+              final String? fotoDurante = data['fotoDuranteUrl']?.toString();
+
+              final String? fotoFinal = data['fotoDespuesUrl']?.toString();
+
+              final bool tieneAntes = fotoAntes != null && fotoAntes.isNotEmpty;
+
+              final bool tieneDurante =
+                  fotoDurante != null && fotoDurante.isNotEmpty;
+
+              final bool tieneFinal = fotoFinal != null && fotoFinal.isNotEmpty;
+
+              final bool completa = tieneAntes && tieneDurante && tieneFinal;
 
               return _HistorialCard(
                 fecha: fecha,
                 grupo: grupo,
                 completa: completa,
-                antes: fotoAntes != null,
-                durante: fotoDurante != null,
-                finalMisa: fotoFinal != null,
-                horaAntes: data['horaAntes'] ?? '',
-                horaDurante: data['horaDurante'] ?? '',
-                horaFinal: data['horaFinal'] ?? '',
+                antes: tieneAntes,
+                durante: tieneDurante,
+                finalMisa: tieneFinal,
+                horaAntes: data['horaAntes']?.toString() ?? '',
+                horaDurante: data['horaDurante']?.toString() ?? '',
+                horaFinal: data['horaDespues']?.toString() ?? '',
               );
             },
           );

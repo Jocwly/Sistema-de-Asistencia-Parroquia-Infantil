@@ -1,14 +1,45 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sapi/Login.dart';
 import 'package:sapi/Padre/alumno/registrar_asistencia.dart';
 
-class InicioAlumno extends StatelessWidget {
+class InicioAlumno extends StatefulWidget {
   const InicioAlumno({super.key});
 
   static get routeName => '/InicioAlumno';
+  @override
+  State<InicioAlumno> createState() => _InicioAlumnoState();
+}
+
+class _InicioAlumnoState extends State<InicioAlumno> {
+  String nombreAlumno = '';
 
   void _cerrarSesion(BuildContext context) {
     Navigator.pushReplacementNamed(context, Login.routeName);
+  }
+
+  Future<void> obtenerNombreAlumno() async {
+    final usuario = FirebaseAuth.instance.currentUser;
+
+    if (usuario == null) return;
+
+    final doc = await FirebaseFirestore.instance
+        .collection('usuarios')
+        .doc(usuario.uid)
+        .get();
+
+    if (doc.exists) {
+      setState(() {
+        nombreAlumno = doc['nombre'];
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    obtenerNombreAlumno();
   }
 
   @override
@@ -55,9 +86,12 @@ class InicioAlumno extends StatelessWidget {
               ),
               const SizedBox(height: 24),
 
-              const Text(
-                'Hola, Nombre del Alumno',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              Text(
+                'Hola, $nombreAlumno',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 4),
               const Text(
