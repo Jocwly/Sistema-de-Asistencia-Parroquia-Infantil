@@ -47,6 +47,14 @@ class _CalendarioAdminState extends State<CalendarioAdmin> {
     return DateTime(fecha.year, fecha.month, fecha.day);
   }
 
+  bool _esMesAnterior(DateTime fecha) {
+    final hoy = DateTime.now();
+    final mesActualReal = DateTime(hoy.year, hoy.month);
+    final mesDeLaFecha = DateTime(fecha.year, fecha.month);
+
+    return mesDeLaFecha.isBefore(mesActualReal);
+  }
+
   bool _esDomingo(DateTime fecha) {
     return fecha.weekday == DateTime.sunday;
   }
@@ -77,6 +85,16 @@ class _CalendarioAdminState extends State<CalendarioAdmin> {
     DateTime fechaInicial, {
     MisaEspecial? misaExistente,
   }) async {
+    if (misaExistente == null && _esMesAnterior(fechaInicial)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No puedes registrar misas especiales en meses anteriores.',
+          ),
+        ),
+      );
+      return;
+    }
     DateTime fechaSeleccionada = _normalizarFecha(
       misaExistente?.fecha ?? fechaInicial,
     );
@@ -96,7 +114,9 @@ class _CalendarioAdminState extends State<CalendarioAdmin> {
               final nuevaFecha = await showDatePicker(
                 context: dialogContext,
                 initialDate: fechaSeleccionada,
-                firstDate: DateTime(2020),
+                firstDate: misaExistente == null
+                    ? DateTime(DateTime.now().year, DateTime.now().month, 1)
+                    : DateTime(2020),
                 lastDate: DateTime(2100),
                 helpText: 'Selecciona la fecha de la misa',
                 cancelText: 'Cancelar',
@@ -117,6 +137,16 @@ class _CalendarioAdminState extends State<CalendarioAdmin> {
                 ScaffoldMessenger.of(this.context).showSnackBar(
                   const SnackBar(
                     content: Text('Escribe el nombre de la misa.'),
+                  ),
+                );
+                return;
+              }
+              if (misaExistente == null && _esMesAnterior(fechaSeleccionada)) {
+                ScaffoldMessenger.of(this.context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'No puedes registrar misas especiales en meses anteriores.',
+                    ),
                   ),
                 );
                 return;

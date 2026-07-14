@@ -1,5 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'EvidenciaFotografica.dart';
+import 'package:sapi/services/grupos_service.dart';
 
 class ControlAsistencia extends StatefulWidget {
   const ControlAsistencia({super.key});
@@ -12,91 +14,127 @@ class ControlAsistencia extends StatefulWidget {
 
 class _ControlAsistenciaState extends State<ControlAsistencia> {
   final TextEditingController _buscarController = TextEditingController();
+  final GruposService _gruposService = GruposService();
 
   DateTime? _fechaSeleccionada;
   String _grupoSeleccionado = 'Todos los grupos';
 
-  final List<Map<String, dynamic>> _alumnos = [
-    {
-      'nombre': 'Ana García López',
-      'grupo': 'Grupo A',
-      'edad': 12,
-      'fecha': 'domingo, 5 de julio de 2026',
-      'estado': 'Parcial',
-      'antes': true,
-      'durante': true,
-      'final': false,
-      'horaAntes': '09:02',
-      'horaDurante': '10:15',
-      'horaFinal': null,
-    },
-    {
-      'nombre': 'Ana García López',
-      'grupo': 'Grupo A',
-      'edad': 5,
-      'fecha': 'domingo, 5 de julio de 2026',
-      'estado': 'Completa',
-      'antes': true,
-      'durante': true,
-      'final': true,
-      'horaAntes': '09:05',
-      'horaDurante': '10:12',
-      'horaFinal': '11:03',
-    },
-    {
-      'nombre': 'Carlos Mendoza Ruiz',
-      'grupo': 'Grupo A',
-      'edad': 5,
-      'fecha': 'domingo, 5 de julio de 2026',
-      'estado': 'Completa',
-      'antes': true,
-      'durante': true,
-      'final': true,
-      'horaAntes': '09:04',
-      'horaDurante': '10:14',
-      'horaFinal': '11:02',
-    },
-    {
-      'nombre': 'Ana García López',
-      'grupo': 'Grupo A',
-      'edad': 5,
-      'fecha': 'domingo, 5 de julio de 2026',
-      'estado': 'Completa',
-      'antes': true,
-      'durante': true,
-      'final': true,
-      'horaAntes': '09:03',
-      'horaDurante': '10:11',
-      'horaFinal': '11:01',
-    },
-    {
-      'nombre': 'Carlos Mendoza Ruiz',
-      'grupo': 'Grupo A',
-      'edad': 5,
-      'fecha': 'domingo, 5 de julio de 2026',
-      'estado': 'Completa',
-      'antes': true,
-      'durante': true,
-      'final': true,
-      'horaAntes': '09:01',
-      'horaDurante': '10:10',
-      'horaFinal': '11:05',
-    },
-  ];
+  bool _esLaMismaFecha(DateTime fecha1, DateTime fecha2) {
+    return fecha1.year == fecha2.year &&
+        fecha1.month == fecha2.month &&
+        fecha1.day == fecha2.day;
+  }
 
-  List<Map<String, dynamic>> get _alumnosFiltrados {
+  DateTime? _convertirFecha(dynamic valor) {
+    if (valor is Timestamp) {
+      return valor.toDate();
+    }
+
+    if (valor is DateTime) {
+      return valor;
+    }
+
+    if (valor is String) {
+      return DateTime.tryParse(valor);
+    }
+
+    return null;
+  }
+
+  String _formatearFechaCompleta(DateTime? fecha) {
+    if (fecha == null) return 'Fecha no disponible';
+
+    const dias = [
+      'lunes',
+      'martes',
+      'miércoles',
+      'jueves',
+      'viernes',
+      'sábado',
+      'domingo',
+    ];
+
+    const meses = [
+      'enero',
+      'febrero',
+      'marzo',
+      'abril',
+      'mayo',
+      'junio',
+      'julio',
+      'agosto',
+      'septiembre',
+      'octubre',
+      'noviembre',
+      'diciembre',
+    ];
+
+    return '${dias[fecha.weekday - 1]}, '
+        '${fecha.day} de ${meses[fecha.month - 1]} de ${fecha.year}';
+  }
+
+  Map<String, dynamic> _convertirDocumento(
+    QueryDocumentSnapshot<Map<String, dynamic>> documento,
+  ) {
+    final data = documento.data();
+
+    final fotoAntes = data['fotoAntesUrl']?.toString() ?? '';
+    final fotoDurante = data['fotoDuranteUrl']?.toString() ?? '';
+    final fotoDespues = data['fotoDespuesUrl']?.toString() ?? '';
+
+    final antes = fotoAntes.isNotEmpty;
+    final durante = fotoDurante.isNotEmpty;
+    final finalizo = fotoDespues.isNotEmpty;
+
+    final fecha = _convertirFecha(data['fecha']);
+
+    return {
+      'idAsistencia': documento.id,
+      'uidAlumno': data['uidAlumno']?.toString() ?? '',
+      'nombre': data['nombreAlumno']?.toString().trim().isNotEmpty == true
+          ? data['nombreAlumno'].toString()
+          : 'Alumno sin nombre',
+      'grupo': data['grupo']?.toString() ?? 'Sin grupo',
+      'edad': int.tryParse(data['edad']?.toString() ?? '0') ?? 0,
+      'correoAlumno': data['correoAlumno']?.toString() ?? '',
+      'fechaDateTime': fecha,
+      'fecha': _formatearFechaCompleta(fecha),
+      'estado': antes && durante && finalizo ? 'Completa' : 'Parcial',
+      'antes': antes,
+      'durante': durante,
+      'final': finalizo,
+      'fotoAntesUrl': fotoAntes,
+      'fotoDuranteUrl': fotoDurante,
+      'fotoDespuesUrl': fotoDespues,
+      'horaAntes': data['horaAntes']?.toString(),
+      'horaDurante': data['horaDurante']?.toString(),
+      'horaFinal': data['horaDespues']?.toString(),
+      'horaDespues': data['horaDespues']?.toString(),
+    };
+  }
+
+  List<Map<String, dynamic>> _filtrarAlumnos(
+    List<Map<String, dynamic>> alumnos,
+    String grupoSeleccionado,
+  ) {
     final texto = _buscarController.text.toLowerCase().trim();
 
-    return _alumnos.where((alumno) {
-      final coincideNombre = alumno['nombre'].toString().toLowerCase().contains(
-        texto,
-      );
+    return alumnos.where((alumno) {
+      final nombre = alumno['nombre'].toString().toLowerCase();
+      final grupoAlumno = alumno['grupo'].toString().trim();
+      final fecha = alumno['fechaDateTime'] as DateTime?;
+
+      final coincideNombre = nombre.contains(texto);
 
       final coincideGrupo =
-          _grupoSeleccionado == 'Todos los grupos' ||
-          alumno['grupo'] == _grupoSeleccionado;
+          grupoSeleccionado == 'Todos los grupos' ||
+          grupoAlumno.toLowerCase() == grupoSeleccionado.toLowerCase();
 
-      return coincideNombre && coincideGrupo;
+      final coincideFecha =
+          _fechaSeleccionada == null ||
+          (fecha != null && _esLaMismaFecha(fecha, _fechaSeleccionada!));
+
+      return coincideNombre && coincideGrupo && coincideFecha;
     }).toList();
   }
 
@@ -109,14 +147,14 @@ class _ControlAsistenciaState extends State<ControlAsistencia> {
       locale: const Locale('es', 'MX'),
     );
 
-    if (fecha != null) {
+    if (fecha != null && mounted) {
       setState(() {
         _fechaSeleccionada = fecha;
       });
     }
   }
 
-  String _formatearFecha(DateTime? fecha) {
+  String _formatearFechaFiltro(DateTime? fecha) {
     if (fecha == null) {
       return 'dd/mm/aaaa';
     }
@@ -128,7 +166,13 @@ class _ControlAsistenciaState extends State<ControlAsistencia> {
   }
 
   String _obtenerIniciales(String nombre) {
-    final partes = nombre.trim().split(' ');
+    final partes = nombre
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((parte) => parte.isNotEmpty)
+        .toList();
+
+    if (partes.isEmpty) return '?';
 
     if (partes.length == 1) {
       return partes.first.substring(0, 1).toUpperCase();
@@ -201,6 +245,15 @@ class _ControlAsistenciaState extends State<ControlAsistencia> {
                         color: amarillo,
                         size: 20,
                       ),
+                      suffixIcon: _buscarController.text.isNotEmpty
+                          ? IconButton(
+                              onPressed: () {
+                                _buscarController.clear();
+                                setState(() {});
+                              },
+                              icon: const Icon(Icons.close, size: 18),
+                            )
+                          : null,
                       filled: true,
                       fillColor: Colors.white,
                       contentPadding: const EdgeInsets.symmetric(vertical: 12),
@@ -233,14 +286,33 @@ class _ControlAsistenciaState extends State<ControlAsistencia> {
                               borderRadius: BorderRadius.circular(13),
                               border: Border.all(color: amarillo),
                             ),
-                            child: Text(
-                              _formatearFecha(_fechaSeleccionada),
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: _fechaSeleccionada == null
-                                    ? Colors.grey.shade600
-                                    : Colors.black87,
-                              ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    _formatearFechaFiltro(_fechaSeleccionada),
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: _fechaSeleccionada == null
+                                          ? Colors.grey.shade600
+                                          : Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                                if (_fechaSeleccionada != null)
+                                  GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        _fechaSeleccionada = null;
+                                      });
+                                    },
+                                    child: const Icon(
+                                      Icons.close,
+                                      size: 17,
+                                      color: Colors.black54,
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
                         ),
@@ -255,41 +327,89 @@ class _ControlAsistenciaState extends State<ControlAsistencia> {
                             borderRadius: BorderRadius.circular(13),
                             border: Border.all(color: amarillo),
                           ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: _grupoSeleccionado,
-                              isExpanded: true,
-                              icon: const Icon(
-                                Icons.keyboard_arrow_down,
-                                color: Colors.black87,
-                              ),
-                              style: const TextStyle(
-                                color: Colors.black87,
-                                fontSize: 13,
-                              ),
-                              items: const [
-                                DropdownMenuItem(
-                                  value: 'Todos los grupos',
-                                  child: Text('Todos los grupos'),
-                                ),
-                                DropdownMenuItem(
-                                  value: 'Grupo A',
-                                  child: Text('Grupo A'),
-                                ),
-                                DropdownMenuItem(
-                                  value: 'Grupo B',
-                                  child: Text('Grupo B'),
-                                ),
-                              ],
-                              onChanged: (valor) {
-                                if (valor == null) return;
+                          child:
+                              StreamBuilder<
+                                QuerySnapshot<Map<String, dynamic>>
+                              >(
+                                stream: _gruposService.obtenerGrupos(),
+                                builder: (context, snapshotGrupos) {
+                                  if (snapshotGrupos.connectionState ==
+                                      ConnectionState.waiting) {
+                                    return const Center(
+                                      child: SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: amarillo,
+                                        ),
+                                      ),
+                                    );
+                                  }
 
-                                setState(() {
-                                  _grupoSeleccionado = valor;
-                                });
-                              },
-                            ),
-                          ),
+                                  final gruposFirestore =
+                                      snapshotGrupos.data?.docs
+                                          .map(
+                                            (documento) =>
+                                                documento
+                                                    .data()['grupo']
+                                                    ?.toString()
+                                                    .trim() ??
+                                                '',
+                                          )
+                                          .where((grupo) => grupo.isNotEmpty)
+                                          .toSet()
+                                          .toList() ??
+                                      [];
+
+                                  gruposFirestore.sort(
+                                    (grupo1, grupo2) =>
+                                        grupo1.compareTo(grupo2),
+                                  );
+
+                                  final opciones = [
+                                    'Todos los grupos',
+                                    ...gruposFirestore,
+                                  ];
+
+                                  final valorActual =
+                                      opciones.contains(_grupoSeleccionado)
+                                      ? _grupoSeleccionado
+                                      : 'Todos los grupos';
+
+                                  return DropdownButtonHideUnderline(
+                                    child: DropdownButton<String>(
+                                      value: valorActual,
+                                      isExpanded: true,
+                                      icon: const Icon(
+                                        Icons.keyboard_arrow_down,
+                                        color: Colors.black87,
+                                      ),
+                                      style: const TextStyle(
+                                        color: Colors.black87,
+                                        fontSize: 13,
+                                      ),
+                                      items: opciones.map((grupo) {
+                                        return DropdownMenuItem<String>(
+                                          value: grupo,
+                                          child: Text(
+                                            grupo,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        );
+                                      }).toList(),
+                                      onChanged: (valor) {
+                                        if (valor == null) return;
+
+                                        setState(() {
+                                          _grupoSeleccionado = valor;
+                                        });
+                                      },
+                                    ),
+                                  );
+                                },
+                              ),
                         ),
                       ),
                     ],
@@ -298,38 +418,78 @@ class _ControlAsistenciaState extends State<ControlAsistencia> {
               ),
             ),
             Expanded(
-              child: _alumnosFiltrados.isEmpty
-                  ? const Center(
+              child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                stream: FirebaseFirestore.instance
+                    .collection('asistencias')
+                    .orderBy('fecha', descending: true)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Text(
+                          'No se pudieron cargar las asistencias.\n'
+                          '${snapshot.error}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.redAccent),
+                        ),
+                      ),
+                    );
+                  }
+
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: CircularProgressIndicator(color: amarillo),
+                    );
+                  }
+
+                  final documentos = snapshot.data?.docs ?? [];
+
+                  final alumnos = documentos.map(_convertirDocumento).toList();
+
+                  final alumnosFiltrados = _filtrarAlumnos(
+                    alumnos,
+                    _grupoSeleccionado,
+                  );
+                  if (alumnosFiltrados.isEmpty) {
+                    return const Center(
                       child: Text(
                         'No se encontraron registros',
                         style: TextStyle(color: Colors.grey),
                       ),
-                    )
-                  : ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Text(
-                            '${_alumnosFiltrados.length} registro(s)',
-                            style: const TextStyle(
-                              color: Color(0xFF857000),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
+                    );
+                  }
+
+                  return ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          '${alumnosFiltrados.length} registro(s)',
+                          style: const TextStyle(
+                            color: Color(0xFF857000),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                        ..._alumnosFiltrados.map(
-                          (alumno) => _TarjetaAlumno(
-                            alumno: alumno,
-                            iniciales: _obtenerIniciales(alumno['nombre']),
-                            colorPrincipal: amarillo,
-                            colorClaro: amarilloClaro,
-                            onVerEvidencia: () => _abrirEvidencia(alumno),
+                      ),
+                      ...alumnosFiltrados.map(
+                        (alumno) => _TarjetaAlumno(
+                          alumno: alumno,
+                          iniciales: _obtenerIniciales(
+                            alumno['nombre'].toString(),
                           ),
+                          colorPrincipal: amarillo,
+                          colorClaro: amarilloClaro,
+                          onVerEvidencia: () => _abrirEvidencia(alumno),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
           ],
         ),
@@ -355,7 +515,8 @@ class _TarjetaAlumno extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool completa = alumno['estado'] == 'Completa';
+    final completa = alumno['estado'] == 'Completa';
+    final edad = alumno['edad'] as int? ?? 0;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -387,7 +548,7 @@ class _TarjetaAlumno extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      alumno['nombre'],
+                      alumno['nombre'].toString(),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -397,10 +558,20 @@ class _TarjetaAlumno extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${alumno['grupo']} • ${alumno['edad']} años',
+                      edad > 0
+                          ? '${alumno['grupo']} • $edad años'
+                          : alumno['grupo'].toString(),
                       style: const TextStyle(
                         fontSize: 10,
                         color: Color(0xFF9B8500),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      alumno['fecha'].toString(),
+                      style: const TextStyle(
+                        fontSize: 9,
+                        color: Colors.black54,
                       ),
                     ),
                   ],
@@ -433,7 +604,7 @@ class _TarjetaAlumno extends StatelessWidget {
               Expanded(
                 child: _EtapaAsistencia(
                   texto: 'Antes',
-                  activo: alumno['antes'],
+                  activo: alumno['antes'] == true,
                   color: colorPrincipal,
                   colorClaro: colorClaro,
                 ),
@@ -442,7 +613,7 @@ class _TarjetaAlumno extends StatelessWidget {
               Expanded(
                 child: _EtapaAsistencia(
                   texto: 'Durante',
-                  activo: alumno['durante'],
+                  activo: alumno['durante'] == true,
                   color: colorPrincipal,
                   colorClaro: colorClaro,
                 ),
@@ -451,7 +622,7 @@ class _TarjetaAlumno extends StatelessWidget {
               Expanded(
                 child: _EtapaAsistencia(
                   texto: 'Final',
-                  activo: alumno['final'],
+                  activo: alumno['final'] == true,
                   color: colorPrincipal,
                   colorClaro: colorClaro,
                 ),

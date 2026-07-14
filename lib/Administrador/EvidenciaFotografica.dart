@@ -3,15 +3,23 @@ import 'package:flutter/material.dart';
 class EvidenciaFotografica extends StatelessWidget {
   final Map<String, dynamic> alumno;
 
-  const EvidenciaFotografica({
-    super.key,
-    required this.alumno,
-  });
+  const EvidenciaFotografica({super.key, required this.alumno});
 
   static const routeName = '/evidencia-fotografica';
 
+  String _texto(dynamic valor, {String valorPredeterminado = ''}) {
+    final texto = valor?.toString().trim() ?? '';
+    return texto.isEmpty ? valorPredeterminado : texto;
+  }
+
   String _obtenerIniciales(String nombre) {
-    final partes = nombre.trim().split(' ');
+    final partes = nombre
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((parte) => parte.isNotEmpty)
+        .toList();
+
+    if (partes.isEmpty) return '?';
 
     if (partes.length == 1) {
       return partes.first.substring(0, 1).toUpperCase();
@@ -20,10 +28,128 @@ class EvidenciaFotografica extends StatelessWidget {
     return '${partes[0][0]}${partes[1][0]}'.toUpperCase();
   }
 
+  bool _tieneImagen(String? url) {
+    return url != null && url.trim().isNotEmpty;
+  }
+
+  void _mostrarImagenCompleta(
+    BuildContext context, {
+    required String url,
+    required String titulo,
+  }) {
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (_) {
+        return Dialog(
+          insetPadding: const EdgeInsets.all(12),
+          backgroundColor: Colors.black,
+          child: Stack(
+            children: [
+              InteractiveViewer(
+                minScale: 0.8,
+                maxScale: 5,
+                child: Center(
+                  child: Image.network(
+                    url,
+                    fit: BoxFit.contain,
+                    loadingBuilder: (context, child, progreso) {
+                      if (progreso == null) return child;
+
+                      return const SizedBox(
+                        height: 350,
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: Color(0xFFFFC400),
+                          ),
+                        ),
+                      );
+                    },
+                    errorBuilder: (_, __, ___) {
+                      return const SizedBox(
+                        height: 350,
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.broken_image_outlined,
+                                color: Colors.white70,
+                                size: 48,
+                              ),
+                              SizedBox(height: 10),
+                              Text(
+                                'No se pudo cargar la fotografía',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 8,
+                left: 12,
+                right: 48,
+                child: Text(
+                  titulo,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    shadows: [Shadow(color: Colors.black, blurRadius: 5)],
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 2,
+                right: 2,
+                child: IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     const amarillo = Color(0xFFFFC400);
     const fondo = Color(0xFFF8F8F8);
+
+    final nombre = _texto(
+      alumno['nombre'],
+      valorPredeterminado: 'Alumno sin nombre',
+    );
+    final grupo = _texto(alumno['grupo'], valorPredeterminado: 'Sin grupo');
+    final fecha = _texto(
+      alumno['fecha'],
+      valorPredeterminado: 'Fecha no disponible',
+    );
+    final estado = _texto(alumno['estado'], valorPredeterminado: 'Parcial');
+
+    final fotoAntes = _texto(alumno['fotoAntesUrl']);
+    final fotoDurante = _texto(alumno['fotoDuranteUrl']);
+    final fotoFinal = _texto(alumno['fotoDespuesUrl']);
+
+    final horaAntes = _texto(alumno['horaAntes'], valorPredeterminado: '--:--');
+    final horaDurante = _texto(
+      alumno['horaDurante'],
+      valorPredeterminado: '--:--',
+    );
+    final horaFinal = _texto(
+      alumno['horaFinal'] ?? alumno['horaDespues'],
+      valorPredeterminado: '--:--',
+    );
 
     return Scaffold(
       backgroundColor: fondo,
@@ -33,10 +159,7 @@ class EvidenciaFotografica extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: const Icon(
-            Icons.arrow_back_ios_new,
-            color: Colors.black87,
-          ),
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87),
         ),
         title: const Text(
           'Evidencia Fotográfica',
@@ -48,49 +171,68 @@ class EvidenciaFotografica extends StatelessWidget {
         ),
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(1),
-          child: Divider(
-            color: amarillo,
-            height: 1,
-            thickness: 1,
-          ),
+          child: Divider(color: amarillo, height: 1, thickness: 1),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 30),
-        child: Column(
-          children: [
-            _TarjetaAlumno(
-              nombre: alumno['nombre'],
-              grupo: alumno['grupo'],
-              fecha: alumno['fecha'],
-              iniciales: _obtenerIniciales(alumno['nombre']),
-              estado: alumno['estado'],
-            ),
-            const SizedBox(height: 12),
-            _TarjetaEvidencia(
-              emoji: '🌅',
-              titulo: 'Antes de la Misa',
-              hora: alumno['horaAntes'],
-              tieneFotografia: alumno['antes'] == true,
-              fondoFotografia: const Color(0xFFFFF6BC),
-            ),
-            const SizedBox(height: 12),
-            _TarjetaEvidencia(
-              emoji: '⛪',
-              titulo: 'Durante la Misa',
-              hora: alumno['horaDurante'],
-              tieneFotografia: alumno['durante'] == true,
-              fondoFotografia: const Color(0xFFFFE94D),
-            ),
-            const SizedBox(height: 12),
-            _TarjetaEvidencia(
-              emoji: '🙏',
-              titulo: 'Al Finalizar',
-              hora: alumno['horaFinal'],
-              tieneFotografia: alumno['final'] == true,
-              fondoFotografia: Colors.white,
-            ),
-          ],
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 30),
+          child: Column(
+            children: [
+              _TarjetaAlumno(
+                nombre: nombre,
+                grupo: grupo,
+                fecha: fecha,
+                iniciales: _obtenerIniciales(nombre),
+                estado: estado,
+              ),
+              const SizedBox(height: 12),
+              _TarjetaEvidencia(
+                icono: Icons.wb_sunny_outlined,
+                titulo: 'Antes de la Misa',
+                hora: horaAntes,
+                imageUrl: fotoAntes,
+                fondoFotografia: const Color(0xFFFFF6BC),
+                onVerImagen: _tieneImagen(fotoAntes)
+                    ? () => _mostrarImagenCompleta(
+                        context,
+                        url: fotoAntes,
+                        titulo: 'Antes de la Misa',
+                      )
+                    : null,
+              ),
+              const SizedBox(height: 12),
+              _TarjetaEvidencia(
+                icono: Icons.church_outlined,
+                titulo: 'Durante la Misa',
+                hora: horaDurante,
+                imageUrl: fotoDurante,
+                fondoFotografia: const Color(0xFFFFE94D),
+                onVerImagen: _tieneImagen(fotoDurante)
+                    ? () => _mostrarImagenCompleta(
+                        context,
+                        url: fotoDurante,
+                        titulo: 'Durante la Misa',
+                      )
+                    : null,
+              ),
+              const SizedBox(height: 12),
+              _TarjetaEvidencia(
+                icono: Icons.volunteer_activism_outlined,
+                titulo: 'Al Finalizar',
+                hora: horaFinal,
+                imageUrl: fotoFinal,
+                fondoFotografia: Colors.white,
+                onVerImagen: _tieneImagen(fotoFinal)
+                    ? () => _mostrarImagenCompleta(
+                        context,
+                        url: fotoFinal,
+                        titulo: 'Al Finalizar',
+                      )
+                    : null,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -123,9 +265,7 @@ class _TarjetaAlumno extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: amarillo,
-        ),
+        border: Border.all(color: amarillo),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -156,7 +296,7 @@ class _TarjetaAlumno extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  grupo,
+                  'Grupo $grupo',
                   style: const TextStyle(
                     color: Color(0xFF9B8500),
                     fontSize: 10,
@@ -217,19 +357,23 @@ class _TarjetaAlumno extends StatelessWidget {
 }
 
 class _TarjetaEvidencia extends StatelessWidget {
-  final String emoji;
+  final IconData icono;
   final String titulo;
-  final String? hora;
-  final bool tieneFotografia;
+  final String hora;
+  final String imageUrl;
   final Color fondoFotografia;
+  final VoidCallback? onVerImagen;
 
   const _TarjetaEvidencia({
-    required this.emoji,
+    required this.icono,
     required this.titulo,
     required this.hora,
-    required this.tieneFotografia,
+    required this.imageUrl,
     required this.fondoFotografia,
+    required this.onVerImagen,
   });
+
+  bool get tieneFotografia => imageUrl.trim().isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -243,19 +387,14 @@ class _TarjetaEvidencia extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: amarillo,
-        ),
+        border: Border.all(color: amarillo),
       ),
       child: Column(
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                emoji,
-                style: const TextStyle(fontSize: 18),
-              ),
+              Icon(icono, color: const Color(0xFF7A6700), size: 21),
               const SizedBox(width: 7),
               Expanded(
                 child: Column(
@@ -271,7 +410,7 @@ class _TarjetaEvidencia extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       tieneFotografia
-                          ? 'Enviada a las ${hora ?? '--:--'}'
+                          ? 'Enviada a las $hora'
                           : 'No se envió evidencia',
                       style: const TextStyle(
                         color: Color(0xFF9B8500),
@@ -291,63 +430,105 @@ class _TarjetaEvidencia extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            height: 130,
-            decoration: BoxDecoration(
-              color: fondoFotografia,
-              borderRadius: BorderRadius.circular(13),
-              border: Border.all(
-                color: amarillo,
-                width: 1.3,
+          GestureDetector(
+            onTap: onVerImagen,
+            child: Container(
+              width: double.infinity,
+              height: 190,
+              decoration: BoxDecoration(
+                color: fondoFotografia,
+                borderRadius: BorderRadius.circular(13),
+                border: Border.all(color: amarillo, width: 1.3),
               ),
+              clipBehavior: Clip.antiAlias,
+              child: tieneFotografia
+                  ? Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.network(
+                          imageUrl,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+
+                            return const Center(
+                              child: CircularProgressIndicator(color: amarillo),
+                            );
+                          },
+                          errorBuilder: (_, __, ___) {
+                            return const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.broken_image_outlined,
+                                  color: Color(0xFF9B8500),
+                                  size: 34,
+                                ),
+                                SizedBox(height: 8),
+                                Text(
+                                  'No se pudo cargar la fotografía',
+                                  style: TextStyle(
+                                    color: Color(0xFF9B8500),
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                        Positioned(
+                          right: 8,
+                          bottom: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 9,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black54,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(
+                                  Icons.zoom_in,
+                                  color: Colors.white,
+                                  size: 15,
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Ver foto',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.image_not_supported_outlined,
+                          color: amarillo,
+                          size: 34,
+                        ),
+                        SizedBox(height: 9),
+                        Text(
+                          'Sin fotografía',
+                          style: TextStyle(
+                            color: Color(0xFF9B8500),
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
             ),
-            child: tieneFotografia
-                ? Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.photo_camera_outlined,
-                        color: amarillo,
-                        size: 34,
-                      ),
-                      const SizedBox(height: 9),
-                      const Text(
-                        'Fotografía registrada',
-                        style: TextStyle(
-                          color: Color(0xFF6F5D00),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        hora ?? '--:--',
-                        style: const TextStyle(
-                          color: Color(0xFFA28A00),
-                          fontSize: 10,
-                        ),
-                      ),
-                    ],
-                  )
-                : const Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        color: amarillo,
-                        size: 31,
-                      ),
-                      SizedBox(height: 9),
-                      Text(
-                        'Sin fotografía',
-                        style: TextStyle(
-                          color: Color(0xFF9B8500),
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
           ),
         ],
       ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sapi/Administrador/Calendario.dart';
 import 'package:sapi/Administrador/ControlAsistencia.dart';
 import 'package:sapi/Administrador/GestionGrupos.dart';
+import 'package:sapi/Administrador/Reportes.dart';
 
 class InicioAdmin extends StatelessWidget {
   const InicioAdmin({super.key});
@@ -109,8 +110,10 @@ class InicioAdmin extends StatelessWidget {
                             icon: Icons.description,
                             label: 'Reportes',
                             onTap: () {
-                              // TODO: pon aquí tu ruta a Reportes
-                              // Navigator.pushNamed(context, '/reportes');
+                              Navigator.pushNamed(
+                                context,
+                                GenerarReportes.routeName,
+                              );
                             },
                           ),
                         ),
