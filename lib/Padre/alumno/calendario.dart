@@ -11,7 +11,10 @@ class Calendario extends StatefulWidget {
 }
 
 class _CalendarioState extends State<Calendario> {
-  DateTime selectedMonth = DateTime.now();
+  DateTime selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
+
+  final CollectionReference<Map<String, dynamic>> _misasEspecialesRef =
+      FirebaseFirestore.instance.collection('misas_especiales');
 
   List<DateTime> _getDomingosDelMes(DateTime month) {
     final firstDay = DateTime(month.year, month.month, 1);
@@ -21,6 +24,7 @@ class _CalendarioState extends State<Calendario> {
 
     for (int i = 0; i < lastDay.day; i++) {
       final date = firstDay.add(Duration(days: i));
+
       if (date.weekday == DateTime.sunday) {
         domingos.add(date);
       }
@@ -30,7 +34,9 @@ class _CalendarioState extends State<Calendario> {
   }
 
   String _fechaId(DateTime date) {
-    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    return '${date.year}-'
+        '${date.month.toString().padLeft(2, '0')}-'
+        '${date.day.toString().padLeft(2, '0')}';
   }
 
   Future<String> _obtenerEstadoMisa(DateTime date) async {
@@ -39,19 +45,92 @@ class _CalendarioState extends State<Calendario> {
         .doc(_fechaId(date))
         .get();
 
-    if (!doc.exists) return 'Pendiente';
+    if (!doc.exists) {
+      return 'Pendiente';
+    }
 
     final data = doc.data()!;
 
-    final fotos = [
-      data['fotoAntesUrl'],
-      data['fotoDuranteUrl'],
-      data['fotoDespuesUrl'],
-    ].where((foto) => foto != null && foto.toString().isNotEmpty).length;
+    final fotos =
+        [
+          data['fotoAntesUrl'],
+          data['fotoDuranteUrl'],
+          data['fotoDespuesUrl'],
+        ].where((foto) {
+          return foto != null && foto.toString().trim().isNotEmpty;
+        }).length;
 
-    if (fotos == 3) return 'Completa';
-    if (fotos > 0) return 'Parcial';
+    if (fotos == 3) {
+      return 'Completa';
+    }
+
+    if (fotos > 0) {
+      return 'Parcial';
+    }
+
     return 'Pendiente';
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> _obtenerMisasEspecialesDelMes() {
+    final inicioMes = DateTime(selectedMonth.year, selectedMonth.month, 1);
+
+    final inicioMesSiguiente = DateTime(
+      selectedMonth.year,
+      selectedMonth.month + 1,
+      1,
+    );
+
+    return _misasEspecialesRef
+        .where('fecha', isGreaterThanOrEqualTo: Timestamp.fromDate(inicioMes))
+        .where('fecha', isLessThan: Timestamp.fromDate(inicioMesSiguiente))
+        .orderBy('fecha')
+        .snapshots();
+  }
+
+  List<EventoMisa> _crearEventosDelMes(List<MisaEspecial> misasEspeciales) {
+    final domingos = _getDomingosDelMes(selectedMonth);
+
+    final eventos = <EventoMisa>[];
+
+    // Agrega los domingos automáticamente.
+    for (final domingo in domingos) {
+      eventos.add(
+        EventoMisa(
+          fecha: domingo,
+          titulo: '${domingo.day} ${_nombreMesCorto(domingo.month)}',
+          descripcion: 'Misa dominical',
+          esEspecial: false,
+        ),
+      );
+    }
+
+    // Agrega las misas especiales registradas por el administrador.
+    for (final misa in misasEspeciales) {
+      eventos.add(
+        EventoMisa(
+          fecha: misa.fecha,
+          titulo: misa.nombre,
+          descripcion: '${misa.fecha.day} ${_nombreMesCorto(misa.fecha.month)}',
+          esEspecial: true,
+        ),
+      );
+    }
+
+    // Ordena todo por fecha.
+    eventos.sort((a, b) {
+      final comparacionFecha = a.fecha.compareTo(b.fecha);
+
+      if (comparacionFecha != 0) {
+        return comparacionFecha;
+      }
+      if (a.esEspecial == b.esEspecial) {
+        return 0;
+      }
+
+      return a.esEspecial ? 1 : -1;
+    });
+
+    return eventos;
   }
 
   void _mesAnterior() {
@@ -81,6 +160,7 @@ class _CalendarioState extends State<Calendario> {
       'Noviembre',
       'Diciembre',
     ];
+
     return meses[month - 1];
   }
 
@@ -105,8 +185,6 @@ class _CalendarioState extends State<Calendario> {
 
   @override
   Widget build(BuildContext context) {
-    final domingos = _getDomingosDelMes(selectedMonth);
-
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -123,84 +201,137 @@ class _CalendarioState extends State<Calendario> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            Navigator.pop(context);
+          },
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.amber),
-                borderRadius: BorderRadius.circular(12),
+      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        key: ValueKey('${selectedMonth.year}-${selectedMonth.month}'),
+        stream: _obtenerMisasEspecialesDelMes(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'No se pudieron cargar las misas especiales.\n'
+                  '${snapshot.error}',
+                  textAlign: TextAlign.center,
+                ),
               ),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      _botonMes(Icons.chevron_left, _mesAnterior),
-                      Expanded(
-                        child: Text(
-                          '${_nombreMes(selectedMonth.month)} De ${selectedMonth.year}',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
+            );
+          }
+
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final misasEspeciales =
+              snapshot.data?.docs.map((doc) {
+                return MisaEspecial.fromDocument(doc);
+              }).toList() ??
+              [];
+
+          final eventos = _crearEventosDelMes(misasEspeciales);
+
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.amber),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            _botonMes(Icons.chevron_left, _mesAnterior),
+                            Expanded(
+                              child: Text(
+                                '${_nombreMes(selectedMonth.month)} '
+                                'de ${selectedMonth.year}',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ),
+                            _botonMes(Icons.chevron_right, _mesSiguiente),
+                          ],
                         ),
-                      ),
-                      _botonMes(Icons.chevron_right, _mesSiguiente),
+                        const SizedBox(height: 16),
+                        Expanded(
+                          child: eventos.isEmpty
+                              ? const Center(
+                                  child: Text(
+                                    'No hay misas programadas para este mes.',
+                                    style: TextStyle(color: Colors.grey),
+                                  ),
+                                )
+                              : ListView.builder(
+                                  itemCount: eventos.length,
+                                  itemBuilder: (context, index) {
+                                    final evento = eventos[index];
+
+                                    return FutureBuilder<String>(
+                                      key: ValueKey(
+                                        '${_fechaId(evento.fecha)}-'
+                                        '${evento.esEspecial}-'
+                                        '${evento.titulo}',
+                                      ),
+                                      future: _obtenerEstadoMisa(evento.fecha),
+                                      builder: (context, estadoSnapshot) {
+                                        final estado =
+                                            estadoSnapshot.data ?? 'Pendiente';
+
+                                        return _MisaCard(
+                                          dia: evento.fecha.day,
+                                          titulo: evento.titulo,
+                                          subtitulo: evento.descripcion,
+                                          estado: estado,
+                                          esEspecial: evento.esEspecial,
+                                        );
+                                      },
+                                    );
+                                  },
+                                ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.amber),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.circle, color: Colors.amber, size: 14),
+                      SizedBox(width: 6),
+                      Text('Domingo', style: TextStyle(fontSize: 11)),
+                      SizedBox(width: 20),
+                      Icon(Icons.star, color: Colors.amber, size: 14),
+                      SizedBox(width: 6),
+                      Text('Misa especial', style: TextStyle(fontSize: 11)),
                     ],
                   ),
-
-                  const SizedBox(height: 16),
-
-                  ...domingos.map((domingo) {
-                    final nombreMes = _nombreMesCorto(domingo.month);
-
-                    return FutureBuilder<String>(
-                      key: ValueKey(_fechaId(domingo)),
-                      future: _obtenerEstadoMisa(domingo),
-                      builder: (context, snapshot) {
-                        final estado = snapshot.data ?? 'Pendiente';
-
-                        return _MisaCard(
-                          dia: domingo.day,
-                          //fecha: '${domingo.day} $nombreMes',
-                          titulo: '${domingo.day} $nombreMes',
-                          estado: estado,
-                        );
-                      },
-                    );
-                  }),
-                ],
-              ),
+                ),
+              ],
             ),
-
-            const SizedBox(height: 18),
-
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.amber),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.circle, color: Colors.amber, size: 14),
-                  SizedBox(width: 6),
-                  Text('Domingo', style: TextStyle(fontSize: 11)),
-                  SizedBox(width: 20),
-                  Icon(Icons.star, color: Colors.amber, size: 14),
-                  SizedBox(width: 6),
-                  Text('Misa especial', style: TextStyle(fontSize: 11)),
-                ],
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -209,7 +340,7 @@ class _CalendarioState extends State<Calendario> {
     return CircleAvatar(
       backgroundColor: Colors.amber.shade100,
       child: IconButton(
-        icon: Icon(icon, color: Colors.amber),
+        icon: Icon(icon, color: Colors.amber.shade800),
         onPressed: onTap,
       ),
     );
@@ -218,15 +349,17 @@ class _CalendarioState extends State<Calendario> {
 
 class _MisaCard extends StatelessWidget {
   final int dia;
-  //final String fecha;
   final String titulo;
+  final String subtitulo;
   final String estado;
+  final bool esEspecial;
 
   const _MisaCard({
     required this.dia,
-    //required this.fecha,
     required this.titulo,
+    required this.subtitulo,
     required this.estado,
+    required this.esEspecial,
   });
 
   @override
@@ -259,18 +392,18 @@ class _MisaCard extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 18,
-            backgroundColor: Colors.amber,
-            child: Text(
-              '$dia',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-            ),
+            backgroundColor: esEspecial ? Colors.white : Colors.amber,
+            child: esEspecial
+                ? const Icon(Icons.star, color: Colors.amber, size: 22)
+                : Text(
+                    '$dia',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
           ),
-
           const SizedBox(width: 12),
-
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -282,14 +415,14 @@ class _MisaCard extends StatelessWidget {
                     fontSize: 13,
                   ),
                 ),
-                const Text(
-                  'Misa dominical',
-                  style: TextStyle(fontSize: 10, color: Colors.grey),
+                const SizedBox(height: 2),
+                Text(
+                  esEspecial ? '$subtitulo · Misa especial' : subtitulo,
+                  style: const TextStyle(fontSize: 10, color: Colors.grey),
                 ),
               ],
             ),
           ),
-
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
@@ -315,6 +448,55 @@ class _MisaCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class EventoMisa {
+  final DateTime fecha;
+  final String titulo;
+  final String descripcion;
+  final bool esEspecial;
+
+  const EventoMisa({
+    required this.fecha,
+    required this.titulo,
+    required this.descripcion,
+    required this.esEspecial,
+  });
+}
+
+class MisaEspecial {
+  final String id;
+  final String nombre;
+  final DateTime fecha;
+
+  const MisaEspecial({
+    required this.id,
+    required this.nombre,
+    required this.fecha,
+  });
+
+  factory MisaEspecial.fromDocument(
+    QueryDocumentSnapshot<Map<String, dynamic>> documento,
+  ) {
+    final datos = documento.data();
+    final fechaFirestore = datos['fecha'];
+
+    DateTime fecha;
+
+    if (fechaFirestore is Timestamp) {
+      fecha = fechaFirestore.toDate();
+    } else {
+      fecha = DateTime.now();
+    }
+
+    return MisaEspecial(
+      id: documento.id,
+      nombre: (datos['nombre'] as String?)?.trim().isNotEmpty == true
+          ? (datos['nombre'] as String).trim()
+          : 'Misa especial',
+      fecha: fecha,
     );
   }
 }
