@@ -83,7 +83,10 @@ class InicioAdmin extends StatelessWidget {
                             icon: Icons.groups,
                             label: 'Grupos',
                             onTap: () {
-                              Navigator.pushNamed(context, GestionGrupos.routeName);
+                              Navigator.pushNamed(
+                                context,
+                                GestionGrupos.routeName,
+                              );
                             },
                           ),
                         ),

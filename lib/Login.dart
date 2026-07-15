@@ -38,7 +38,7 @@ class _LoginState extends State<Login> {
       Navigator.pushReplacementNamed(context, InicioAdmin.routeName);
       return;
     }
-    
+
     setState(() => _isLoading = true);
 
     try {
@@ -199,16 +199,6 @@ class _LoginState extends State<Login> {
                       }
                       return null;
                     },
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () {},
-                      child: const Text('¿Olvidaste tu contraseña?'),
-                    ),
                   ),
 
                   const SizedBox(height: 24),

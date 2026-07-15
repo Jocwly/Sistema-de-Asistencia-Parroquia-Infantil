@@ -4,67 +4,108 @@ import 'package:sapi/services/grupos_service.dart';
 import 'package:sapi/styles/InfoGrupostyles.dart';
 import 'package:sapi/Administrador/InfoGrupo.dart';
 
-class GestionGrupos extends StatelessWidget {
+class GestionGrupos extends StatefulWidget {
   const GestionGrupos({super.key});
 
   static const routeName = '/GestionGrupos';
 
   @override
-  Widget build(BuildContext context) {
-    final gruposService = GruposService();
+  State<GestionGrupos> createState() => _GestionGruposState();
+}
 
+class _GestionGruposState extends State<GestionGrupos> {
+  final GruposService gruposService = GruposService();
+
+  String? nivelSeleccionado;
+
+  final List<String> gruposPrimaria = const [
+    '2A',
+    '2B',
+    '3A',
+    '3B',
+    '4A',
+    '4B',
+    '5A',
+    '5B',
+    '6A',
+    '6B',
+  ];
+
+  final List<String> gruposSecundaria = const ['1A', '1B'];
+
+  List<String> get gruposDelNivel {
+    if (nivelSeleccionado == 'PRIMARIA') {
+      return gruposPrimaria;
+    }
+
+    if (nivelSeleccionado == 'SECUNDARIA') {
+      return gruposSecundaria;
+    }
+
+    return [];
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: GruposStyles.backgroundColor,
       body: SafeArea(
         child: Column(
           children: [
-            _Header(onAdd: () => _mostrarFormularioAgregarGrupo(context)),
+            const _Header(),
 
-            Expanded(
-              child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                stream: gruposService.obtenerGrupos(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    return const Center(
-                      child: Text('No hay grupos registrados'),
-                    );
-                  }
-
-                  final grupos = snapshot.data!.docs;
-
-                  return ListView.separated(
-                    padding: GruposStyles.screenPadding,
-                    itemCount: grupos.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final data = grupos[index].data();
-                      final grupo = data['grupo'] ?? '';
-                      final catequista = data['catequista'] ?? '';
-
-                      return _GrupoCard(
-                        grupo: grupo,
-                        catequista: catequista,
-
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => InfoGrupo(
-                                grupo: grupo,
-                                catequista: catequista,
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  );
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
+              child: DropdownButtonFormField<String>(
+                value: nivelSeleccionado,
+                decoration: InputDecoration(
+                  labelText: 'NIVEL',
+                  hintText: 'Selecciona un nivel',
+                  prefixIcon: const Icon(
+                    Icons.school_rounded,
+                    color: GruposStyles.primaryYellow,
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(
+                      color: GruposStyles.primaryYellow,
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(
+                      color: GruposStyles.primaryYellow,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(
+                      color: GruposStyles.primaryYellow,
+                      width: 2,
+                    ),
+                  ),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'PRIMARIA', child: Text('PRIMARIA')),
+                  DropdownMenuItem(
+                    value: 'SECUNDARIA',
+                    child: Text('SECUNDARIA'),
+                  ),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    nivelSeleccionado = value;
+                  });
                 },
               ),
+            ),
+
+            Expanded(
+              child: nivelSeleccionado == null
+                  ? const _SeleccionaNivel()
+                  : _construirListaGrupos(),
             ),
           ],
         ),
@@ -72,117 +113,48 @@ class GestionGrupos extends StatelessWidget {
     );
   }
 
-  void _mostrarFormularioAgregarGrupo(BuildContext context) {
-    final formKey = GlobalKey<FormState>();
-    final catequistaController = TextEditingController();
-    final otroGrupoController = TextEditingController();
+  Widget _construirListaGrupos() {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: gruposService.obtenerGrupos(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(color: GruposStyles.primaryYellow),
+          );
+        }
 
-    String grupoSeleccionado = 'A';
+        if (snapshot.hasError) {
+          return const Center(
+            child: Text('Ocurrió un error al cargar los grupos'),
+          );
+        }
 
-    showDialog(
-      context: context,
-      builder: (_) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              title: const Text(
-                'Agregar grupo',
-                style: TextStyle(fontWeight: FontWeight.w900),
-              ),
-              content: Form(
-                key: formKey,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      DropdownButtonFormField<String>(
-                        value: grupoSeleccionado,
-                        decoration: const InputDecoration(
-                          labelText: 'Grupo',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: const [
-                          DropdownMenuItem(value: 'A', child: Text('A')),
-                          DropdownMenuItem(value: 'B', child: Text('B')),
-                          DropdownMenuItem(value: 'C', child: Text('C')),
-                          DropdownMenuItem(value: 'D', child: Text('D')),
-                          DropdownMenuItem(value: 'Otro', child: Text('Otro')),
-                        ],
-                        onChanged: (value) {
-                          setState(() {
-                            grupoSeleccionado = value!;
-                          });
-                        },
-                      ),
+        final documentos = snapshot.data?.docs ?? [];
 
-                      const SizedBox(height: 12),
+        return ListView.separated(
+          padding: GruposStyles.screenPadding,
+          itemCount: gruposDelNivel.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            final grupo = gruposDelNivel[index];
 
-                      if (grupoSeleccionado == 'Otro')
-                        TextFormField(
-                          controller: otroGrupoController,
-                          decoration: const InputDecoration(
-                            labelText: 'Especificar grupo',
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (value) {
-                            if (grupoSeleccionado == 'Otro' &&
-                                (value == null || value.trim().isEmpty)) {
-                              return 'Especifica el grupo';
-                            }
-                            return null;
-                          },
-                        ),
+            for (final documento in documentos) {
+              final data = documento.data();
+              final grupoFirebase = (data['grupo'] ?? '')
+                  .toString()
+                  .trim()
+                  .toUpperCase();
+            }
 
-                      if (grupoSeleccionado == 'Otro')
-                        const SizedBox(height: 12),
+            return _GrupoCard(
+              grupo: grupo,
 
-                      TextFormField(
-                        controller: catequistaController,
-                        decoration: const InputDecoration(
-                          labelText: 'Nombre de catequista encargada',
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Ingresa el nombre de la catequista';
-                          }
-                          return null;
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancelar'),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: GruposStyles.primaryYellow,
-                    foregroundColor: Colors.black,
-                  ),
-                  onPressed: () async {
-                    if (!formKey.currentState!.validate()) return;
-
-                    final grupoFinal = grupoSeleccionado == 'Otro'
-                        ? otroGrupoController.text.trim()
-                        : grupoSeleccionado;
-
-                    await GruposService().agregarGrupo(
-                      grupo: grupoFinal,
-                      catequista: catequistaController.text.trim(),
-                    );
-
-                    if (context.mounted) Navigator.pop(context);
-                  },
-                  child: const Text('Guardar'),
-                ),
-              ],
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => InfoGrupo(grupo: grupo)),
+                );
+              },
             );
           },
         );
@@ -191,10 +163,38 @@ class GestionGrupos extends StatelessWidget {
   }
 }
 
-class _Header extends StatelessWidget {
-  final VoidCallback onAdd;
+class _SeleccionaNivel extends StatelessWidget {
+  const _SeleccionaNivel();
 
-  const _Header({required this.onAdd});
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(30),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.school_outlined,
+              size: 75,
+              color: GruposStyles.primaryYellow,
+            ),
+            const SizedBox(height: 16),
+            Text('Selecciona un nivel', style: GruposStyles.cardTitle),
+            const SizedBox(height: 8),
+            const Text(
+              'Selecciona PRIMARIA o SECUNDARIA para visualizar sus grupos.',
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Header extends StatelessWidget {
+  const _Header();
 
   @override
   Widget build(BuildContext context) {
@@ -211,10 +211,13 @@ class _Header extends StatelessWidget {
             icon: const Icon(Icons.arrow_back_ios_new, size: 26),
             onPressed: () => Navigator.pop(context),
           ),
+
           Expanded(
             child: Center(child: Text('Grupos', style: GruposStyles.title)),
           ),
-          IconButton(icon: const Icon(Icons.add, size: 34), onPressed: onAdd),
+
+          // Este espacio mantiene el título centrado.
+          const SizedBox(width: 48),
         ],
       ),
     );
@@ -223,16 +226,9 @@ class _Header extends StatelessWidget {
 
 class _GrupoCard extends StatelessWidget {
   final String grupo;
-  final String catequista;
-
   final VoidCallback onTap;
 
-  const _GrupoCard({
-    required this.grupo,
-    required this.catequista,
-
-    required this.onTap,
-  });
+  const _GrupoCard({required this.grupo, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -271,7 +267,6 @@ class _GrupoCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('Grupo $grupo', style: GruposStyles.cardTitle),
-                          Text(catequista, style: GruposStyles.normal),
                         ],
                       ),
                     ),

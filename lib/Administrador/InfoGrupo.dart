@@ -5,9 +5,8 @@ import 'package:sapi/styles/InfoGrupostyles.dart';
 
 class InfoGrupo extends StatelessWidget {
   final String grupo;
-  final String catequista;
 
-  const InfoGrupo({super.key, required this.grupo, required this.catequista});
+  const InfoGrupo({super.key, required this.grupo});
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +24,7 @@ class InfoGrupo extends StatelessWidget {
                 padding: GruposStyles.screenPadding,
                 child: Column(
                   children: [
-                    _InfoGrupoCard(catequista: catequista, grupo: grupo),
+                    _InfoGrupoCard(grupo: grupo),
 
                     const SizedBox(height: 16),
 
@@ -74,11 +73,9 @@ class _HeaderDetalle extends StatelessWidget {
 }
 
 class _InfoGrupoCard extends StatelessWidget {
-  final String catequista;
-
   final String grupo;
 
-  const _InfoGrupoCard({required this.catequista, required this.grupo});
+  const _InfoGrupoCard({required this.grupo});
 
   @override
   Widget build(BuildContext context) {
@@ -96,9 +93,6 @@ class _InfoGrupoCard extends StatelessWidget {
               Text('Información del Grupo', style: GruposStyles.cardTitle),
               const SizedBox(height: 18),
 
-              _InfoRow(label: 'Catequista', value: catequista),
-              const Divider(height: 22),
-              
               _InfoRow(
                 label: 'Alumnos inscritos',
                 value: totalAlumnos.toString(),
