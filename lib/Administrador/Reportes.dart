@@ -1,5 +1,4 @@
 import 'dart:typed_data';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
@@ -33,10 +32,6 @@ class _GenerarReportesState extends State<GenerarReportes> {
     super.initState();
     _cargarGrupos();
   }
-
-  // ---------------------------------------------------------------------------
-  // CARGAR GRUPOS DINÁMICAMENTE
-  // ---------------------------------------------------------------------------
 
   Future<void> _cargarGrupos() async {
     try {
@@ -76,10 +71,6 @@ class _GenerarReportesState extends State<GenerarReportes> {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // GENERAR REPORTE DESDE FIRESTORE
-  // ---------------------------------------------------------------------------
-
   Future<void> _generarReporte() async {
     setState(() {
       _generandoReporte = true;
@@ -88,15 +79,6 @@ class _GenerarReportesState extends State<GenerarReportes> {
     });
 
     try {
-      /*
-       * Se descargan los registros de asistencias y se filtran en Dart.
-       *
-       * Esto evita que Firestore solicite índices compuestos al combinar:
-       * - grupo
-       * - fecha
-       *
-       * Para una aplicación pequeña o mediana funciona correctamente.
-       */
       final snapshot = await _firestore
           .collection('asistencias')
           .orderBy('fecha', descending: true)
@@ -196,10 +178,6 @@ class _GenerarReportesState extends State<GenerarReportes> {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // LECTURA DE DATOS
-  // ---------------------------------------------------------------------------
-
   String _obtenerNombreAlumno(Map<String, dynamic> data) {
     final nombreCompleto = _leerTexto(data, [
       'nombreAlumno',
@@ -251,10 +229,6 @@ class _GenerarReportesState extends State<GenerarReportes> {
       return EstadoAsistencia.incompleto;
     }
 
-    /*
-     * Si el documento no tiene un estado guardado, se calcula usando
-     * las fotografías de antes y después.
-     */
     final fotoAntes = _leerFoto(data, [
       'fotoAntesUrl',
       'fotoAntesURL',
@@ -419,10 +393,6 @@ class _GenerarReportesState extends State<GenerarReportes> {
     });
   }
 
-  // ---------------------------------------------------------------------------
-  // CONTADORES
-  // ---------------------------------------------------------------------------
-
   int get _completos {
     return _registros
         .where((registro) => registro.estado == EstadoAsistencia.completo)
@@ -440,10 +410,6 @@ class _GenerarReportesState extends State<GenerarReportes> {
         .where((registro) => registro.estado == EstadoAsistencia.incompleto)
         .length;
   }
-
-  // ---------------------------------------------------------------------------
-  // PDF
-  // ---------------------------------------------------------------------------
 
   Future<Uint8List> _crearPdf(PdfPageFormat format) async {
     final pdf = pw.Document();
@@ -666,10 +632,6 @@ class _GenerarReportesState extends State<GenerarReportes> {
       ),
     );
   }
-
-  // ---------------------------------------------------------------------------
-  // INTERFAZ
-  // ---------------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -1032,10 +994,6 @@ class _GenerarReportesState extends State<GenerarReportes> {
   }
 }
 
-// -----------------------------------------------------------------------------
-// TARJETAS DE RESUMEN
-// -----------------------------------------------------------------------------
-
 class _ResumenCard extends StatelessWidget {
   final int cantidad;
   final String titulo;
@@ -1082,10 +1040,6 @@ class _ResumenCard extends StatelessWidget {
     );
   }
 }
-
-// -----------------------------------------------------------------------------
-// REGISTRO DE ALUMNO
-// -----------------------------------------------------------------------------
 
 class _RegistroItem extends StatelessWidget {
   final RegistroReporte registro;
@@ -1215,10 +1169,6 @@ class _EstadoChip extends StatelessWidget {
   }
 }
 
-// -----------------------------------------------------------------------------
-// VISTA PREVIA PDF
-// -----------------------------------------------------------------------------
-
 class VistaPreviaReportePdf extends StatelessWidget {
   final String grupo;
   final DateTime? fecha;
@@ -1280,10 +1230,6 @@ class VistaPreviaReportePdf extends StatelessWidget {
     );
   }
 }
-
-// -----------------------------------------------------------------------------
-// MODELOS
-// -----------------------------------------------------------------------------
 
 enum EstadoAsistencia { completo, parcial, incompleto }
 
