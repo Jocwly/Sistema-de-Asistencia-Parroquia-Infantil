@@ -47,12 +47,12 @@ class _CalendarioAdminState extends State<CalendarioAdmin> {
     return DateTime(fecha.year, fecha.month, fecha.day);
   }
 
-  bool _esMesAnterior(DateTime fecha) {
-    final hoy = DateTime.now();
-    final mesActualReal = DateTime(hoy.year, hoy.month);
-    final mesDeLaFecha = DateTime(fecha.year, fecha.month);
+  bool _esFechaAnteriorOActual(DateTime fecha) {
+    final hoy = _normalizarFecha(DateTime.now());
+    final fechaNormalizada = _normalizarFecha(fecha);
 
-    return mesDeLaFecha.isBefore(mesActualReal);
+    // Solo se permiten días posteriores a hoy.
+    return !fechaNormalizada.isAfter(hoy);
   }
 
   bool _esDomingo(DateTime fecha) {
@@ -85,11 +85,11 @@ class _CalendarioAdminState extends State<CalendarioAdmin> {
     DateTime fechaInicial, {
     MisaEspecial? misaExistente,
   }) async {
-    if (misaExistente == null && _esMesAnterior(fechaInicial)) {
+    if (misaExistente == null && _esFechaAnteriorOActual(fechaInicial)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'No puedes registrar misas especiales en meses anteriores.',
+            'Solo puedes registrar misas especiales en fechas futuras.',
           ),
         ),
       );
@@ -111,18 +111,24 @@ class _CalendarioAdminState extends State<CalendarioAdmin> {
         return StatefulBuilder(
           builder: (context, actualizarDialogo) {
             Future<void> elegirFecha() async {
+              final hoy = _normalizarFecha(DateTime.now());
+              final manana = hoy.add(const Duration(days: 1));
+
+              final fechaInicialPicker = misaExistente == null
+                  ? (fechaSeleccionada.isAfter(hoy)
+                        ? fechaSeleccionada
+                        : manana)
+                  : fechaSeleccionada;
+
               final nuevaFecha = await showDatePicker(
                 context: dialogContext,
-                initialDate: fechaSeleccionada,
-                firstDate: misaExistente == null
-                    ? DateTime(DateTime.now().year, DateTime.now().month, 1)
-                    : DateTime(2020),
+                initialDate: fechaInicialPicker,
+                firstDate: misaExistente == null ? manana : DateTime(2020),
                 lastDate: DateTime(2100),
-                helpText: 'Selecciona la fecha de la misa',
+                helpText: 'Selecciona una fecha futura',
                 cancelText: 'Cancelar',
                 confirmText: 'Seleccionar',
               );
-
               if (nuevaFecha != null) {
                 actualizarDialogo(() {
                   fechaSeleccionada = _normalizarFecha(nuevaFecha);
@@ -141,11 +147,12 @@ class _CalendarioAdminState extends State<CalendarioAdmin> {
                 );
                 return;
               }
-              if (misaExistente == null && _esMesAnterior(fechaSeleccionada)) {
+              if (misaExistente == null &&
+                  _esFechaAnteriorOActual(fechaSeleccionada)) {
                 ScaffoldMessenger.of(this.context).showSnackBar(
                   const SnackBar(
                     content: Text(
-                      'No puedes registrar misas especiales en meses anteriores.',
+                      'La fecha de la misa debe ser posterior al día de hoy.',
                     ),
                   ),
                 );
@@ -383,13 +390,7 @@ class _CalendarioAdminState extends State<CalendarioAdmin> {
           style: CalendarioAdminStyles.appBarTitle,
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          _seleccionarDia(DateTime.now());
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Nueva misa'),
-      ),
+
       body: SafeArea(
         child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
           stream: _misasRef.orderBy('fecha').snapshots(),
@@ -576,6 +577,7 @@ class _CalendarioAdminState extends State<CalendarioAdmin> {
   Widget _construirDia(DateTime fecha, List<MisaEspecial> misas) {
     final esDomingo = _esDomingo(fecha);
     final esEspecial = _esMisaEspecial(fecha, misas);
+    final esFechaPasadaOActual = _esFechaAnteriorOActual(fecha);
 
     MisaEspecial? misaDelDia;
 
@@ -588,9 +590,11 @@ class _CalendarioAdminState extends State<CalendarioAdmin> {
 
     return InkWell(
       borderRadius: BorderRadius.circular(50),
-      onTap: () {
-        _seleccionarDia(fecha, misaExistente: misaDelDia);
-      },
+      onTap: esFechaPasadaOActual && misaDelDia == null
+          ? null
+          : () {
+              _seleccionarDia(fecha, misaExistente: misaDelDia);
+            },
       child: Center(
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
