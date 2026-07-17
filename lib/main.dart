@@ -12,6 +12,7 @@ import 'package:sapi/Login.dart';
 import 'package:sapi/Administrador/InicioAdmin.dart';
 import 'package:sapi/Padre/alumno/InicioAlumno.dart';
 import 'package:sapi/Padre/alumno/registrar_asistencia.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,6 +28,15 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'SAPI',
       debugShowCheckedModeBanner: false,
+      locale: const Locale('es', 'MX'),
+
+      supportedLocales: const [Locale('es', 'MX'), Locale('es'), Locale('en')],
+
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       theme: ThemeData(useMaterial3: true, fontFamily: 'Roboto'),
       initialRoute: Login.routeName,
       routes: {
