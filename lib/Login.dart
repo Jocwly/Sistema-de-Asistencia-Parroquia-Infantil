@@ -229,7 +229,11 @@ class _LoginState extends State<Login> {
                         },
                         child: const Text(
                           'Regístrate',
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                            decoration: TextDecoration.underline,
+                          ),
                         ),
                       ),
                     ],

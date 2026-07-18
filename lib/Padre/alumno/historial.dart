@@ -54,14 +54,7 @@ class MiHistorial extends StatelessWidget {
           final asistencias = snapshot.data!.docs.where((documento) {
             final data = documento.data() as Map<String, dynamic>;
 
-            if (data['fecha'] == null || data['fecha'] is! Timestamp) {
-              return false;
-            }
-
-            final fecha = (data['fecha'] as Timestamp).toDate();
-
-            // Mostrar únicamente domingos
-            return fecha.weekday == DateTime.sunday;
+            return data['fecha'] != null && data['fecha'] is Timestamp;
           }).toList();
 
           asistencias.sort((a, b) {
@@ -76,7 +69,7 @@ class MiHistorial extends StatelessWidget {
 
           if (asistencias.isEmpty) {
             return const Center(
-              child: Text('No hay misas dominicales registradas'),
+              child: Text('Aún no hay asistencias registradas'),
             );
           }
 

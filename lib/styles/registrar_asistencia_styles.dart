@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class RegistrarAsistenciaStyles {
   static const Color primaryColor = Color(0xFFFFD000);
-  static const Color backgroundColor = Color(0xFFFFFBF0);
+  static const Color backgroundColor = Color.fromARGB(255, 255, 255, 255);
   static const Color headerColor = Colors.white;
   static const Color borderColor = Color(0xFFFFCC00);
   static const Color lightYellow = Color(0xFFFFF6C7);

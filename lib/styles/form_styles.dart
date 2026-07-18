@@ -5,6 +5,7 @@ class LoginStyles {
   static Color get primaryColor => Colors.yellow.shade700;
   static const Color buttonTextColor = Colors.black;
   static const Color errorColor = Colors.redAccent;
+  static const Color backgroundColor = Color.fromARGB(255, 255, 255, 255);
 
   // Espaciados
   static const EdgeInsets pagePadding = EdgeInsets.symmetric(

@@ -18,6 +18,15 @@ class _RegistrarAsistenciaState extends State<RegistrarAsistencia> {
   bool _isUploading = false;
   String? _photoSending;
 
+  // Indica si todavía se está consultando Firestore.
+  bool _verificandoDiaMisa = true;
+
+  // Indica si hoy es domingo o hay una misa especial.
+  bool _esDiaDeMisa = false;
+
+  // Mensaje que se mostrará en la pantalla.
+  String _mensajeDiaMisa = '';
+
   String nombreAlumno = '';
   String grupoAlumno = '';
 
@@ -40,8 +49,9 @@ class _RegistrarAsistenciaState extends State<RegistrarAsistencia> {
   @override
   void initState() {
     super.initState();
+
     _obtenerDatosAlumno();
-    _cargarEvidenciasDeHoy();
+    _verificarDiaDeMisa();
   }
 
   Future<void> _obtenerDatosAlumno() async {
@@ -78,6 +88,88 @@ class _RegistrarAsistenciaState extends State<RegistrarAsistencia> {
 
   String _documentoAsistenciaId(String uid, DateTime fecha) {
     return '${uid}_${_fechaId(fecha)}';
+  }
+
+  /// Comprueba si el alumno puede registrar asistencia hoy.
+  ///
+  /// Se permite cuando:
+  /// 1. Hoy es domingo.
+  /// 2. Hay un documento en misasEspeciales con la fecha de hoy.
+  Future<void> _verificarDiaDeMisa() async {
+    if (mounted) {
+      setState(() {
+        _verificandoDiaMisa = true;
+      });
+    }
+
+    try {
+      final ahora = DateTime.now();
+      final hoy = DateTime(ahora.year, ahora.month, ahora.day);
+
+      /*
+       * Si hoy es domingo, se permite registrar asistencia
+       * sin consultar misasEspeciales.
+       */
+      if (ahora.weekday == DateTime.sunday) {
+        if (!mounted) return;
+
+        setState(() {
+          _esDiaDeMisa = true;
+          _verificandoDiaMisa = false;
+          _mensajeDiaMisa = 'Hoy es domingo. Puedes registrar tu asistencia.';
+        });
+
+        await _cargarEvidenciasDeHoy();
+        return;
+      }
+
+      /*
+       * Si no es domingo, busca una misa especial con fecha de hoy.
+       *
+       * Se consulta desde las 00:00 de hoy hasta antes de las
+       * 00:00 del día siguiente.
+       */
+      final inicioDelDia = hoy;
+      final inicioDiaSiguiente = hoy.add(const Duration(days: 1));
+
+      final resultado = await FirebaseFirestore.instance
+          .collection('misasEspeciales')
+          .where(
+            'fecha',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(inicioDelDia),
+          )
+          .where('fecha', isLessThan: Timestamp.fromDate(inicioDiaSiguiente))
+          .limit(1)
+          .get();
+
+      final existeMisaEspecial = resultado.docs.isNotEmpty;
+
+      if (!mounted) return;
+
+      setState(() {
+        _esDiaDeMisa = existeMisaEspecial;
+        _verificandoDiaMisa = false;
+
+        _mensajeDiaMisa = existeMisaEspecial
+            ? 'Hoy hay una misa especial. Puedes registrar tu asistencia.'
+            : 'Hoy no hay misa programada. No puedes registrar asistencia.';
+      });
+
+      if (existeMisaEspecial) {
+        await _cargarEvidenciasDeHoy();
+      }
+    } catch (e) {
+      debugPrint('Error al verificar el día de misa: $e');
+
+      if (!mounted) return;
+
+      setState(() {
+        _esDiaDeMisa = false;
+        _verificandoDiaMisa = false;
+        _mensajeDiaMisa =
+            'No se pudo verificar si hoy hay misa. Inténtalo nuevamente.';
+      });
+    }
   }
 
   Future<void> _cargarEvidenciasDeHoy() async {
@@ -124,10 +216,38 @@ class _RegistrarAsistenciaState extends State<RegistrarAsistencia> {
   }
 
   Future<void> _takePhoto(String photoKey) async {
+    /*
+     * Protección adicional.
+     *
+     * Aunque los botones estén bloqueados, este método
+     * tampoco permite abrir la cámara si no hay misa.
+     */
+    if (_verificandoDiaMisa) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Se está verificando si hoy hay misa.')),
+      );
+
+      return;
+    }
+
+    if (!_esDiaDeMisa) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No puedes tomar evidencias porque hoy no hay misa programada.',
+          ),
+        ),
+      );
+
+      return;
+    }
+
     try {
       final image = await CameraService.takePhoto();
 
       if (image == null) return;
+
+      if (!mounted) return;
 
       setState(() {
         _isUploading = true;
@@ -165,24 +285,42 @@ class _RegistrarAsistenciaState extends State<RegistrarAsistencia> {
   }
 
   Future<void> _sendPhoto(String photoKey) async {
+    /*
+     * Se vuelve a revisar Firestore antes de guardar.
+     *
+     * Esto evita enviar una asistencia inválida aunque
+     * el método se ejecutara directamente.
+     */
+    final puedeEnviar = await _confirmarDiaDeMisaAntesDeEnviar();
+
+    if (!puedeEnviar) return;
+
     final usuario = FirebaseAuth.instance.currentUser;
     final imageUrl = _photos[photoKey];
 
     if (usuario == null) {
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se encontró un usuario autenticado')),
+        const SnackBar(content: Text('No se encontró un usuario autenticado.')),
       );
+
       return;
     }
 
     if (imageUrl == null || imageUrl.isEmpty) {
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Primero debes tomar una fotografía')),
+        const SnackBar(content: Text('Primero debes tomar una fotografía.')),
       );
+
       return;
     }
 
     try {
+      if (!mounted) return;
+
       setState(() {
         _photoSending = photoKey;
       });
@@ -211,7 +349,7 @@ class _RegistrarAsistenciaState extends State<RegistrarAsistencia> {
           break;
 
         default:
-          throw Exception('Tipo de fotografía no válido');
+          throw Exception('Tipo de fotografía no válido.');
       }
 
       final hora =
@@ -241,7 +379,7 @@ class _RegistrarAsistenciaState extends State<RegistrarAsistencia> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Evidencia enviada correctamente')),
+        const SnackBar(content: Text('Evidencia enviada correctamente.')),
       );
     } catch (e) {
       if (!mounted) return;
@@ -255,6 +393,66 @@ class _RegistrarAsistenciaState extends State<RegistrarAsistencia> {
           _photoSending = null;
         });
       }
+    }
+  }
+
+  /// Realiza una segunda comprobación justo antes de escribir
+  /// la evidencia en la colección asistencias.
+  Future<bool> _confirmarDiaDeMisaAntesDeEnviar() async {
+    try {
+      final ahora = DateTime.now();
+
+      if (ahora.weekday == DateTime.sunday) {
+        return true;
+      }
+
+      final inicioDelDia = DateTime(ahora.year, ahora.month, ahora.day);
+
+      final inicioDiaSiguiente = inicioDelDia.add(const Duration(days: 1));
+
+      final resultado = await FirebaseFirestore.instance
+          .collection('misasEspeciales')
+          .where(
+            'fecha',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(inicioDelDia),
+          )
+          .where('fecha', isLessThan: Timestamp.fromDate(inicioDiaSiguiente))
+          .limit(1)
+          .get();
+
+      if (resultado.docs.isNotEmpty) {
+        return true;
+      }
+
+      if (!mounted) return false;
+
+      setState(() {
+        _esDiaDeMisa = false;
+        _mensajeDiaMisa =
+            'Hoy no hay misa programada. No puedes registrar asistencia.';
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No puedes enviar asistencia porque hoy no hay misa programada.',
+          ),
+        ),
+      );
+
+      return false;
+    } catch (e) {
+      debugPrint('Error al confirmar el día de misa: $e');
+
+      if (!mounted) return false;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudo comprobar la misa. Inténtalo nuevamente.'),
+        ),
+      );
+
+      return false;
     }
   }
 
@@ -296,6 +494,15 @@ class _RegistrarAsistenciaState extends State<RegistrarAsistencia> {
 
     final bool duranteEnviada = _sentPhotos['durante_misa'] ?? false;
 
+    /*
+     * Esta variable será false:
+     * - mientras se consulta Firestore;
+     * - cuando hoy no sea día de misa;
+     * - mientras se sube una fotografía.
+     */
+    final bool registroDisponible =
+        !_verificandoDiaMisa && _esDiaDeMisa && !_isUploading;
+
     return Scaffold(
       backgroundColor: RegistrarAsistenciaStyles.backgroundColor,
       body: SafeArea(
@@ -317,6 +524,15 @@ class _RegistrarAsistenciaState extends State<RegistrarAsistencia> {
 
                         const SizedBox(height: 10),
 
+                        _DiaMisaCard(
+                          verificando: _verificandoDiaMisa,
+                          esDiaDeMisa: _esDiaDeMisa,
+                          mensaje: _mensajeDiaMisa,
+                          onReintentar: _verificarDiaDeMisa,
+                        ),
+
+                        const SizedBox(height: 10),
+
                         _PhotoCard(
                           icon: const Icon(
                             Icons.church,
@@ -326,7 +542,7 @@ class _RegistrarAsistenciaState extends State<RegistrarAsistencia> {
                           title: 'Antes de la Misa',
                           description:
                               'Toma una foto antes de entrar a la iglesia',
-                          buttonEnabled: !_isUploading,
+                          buttonEnabled: registroDisponible,
                           imageUrl: _photos['antes_misa'],
                           sent: _sentPhotos['antes_misa'] ?? false,
                           isSending: _photoSending == 'antes_misa',
@@ -349,7 +565,7 @@ class _RegistrarAsistenciaState extends State<RegistrarAsistencia> {
                           title: 'Durante la Misa',
                           description:
                               'Toma una foto dentro de la iglesia durante la celebración',
-                          buttonEnabled: !_isUploading && antesEnviada,
+                          buttonEnabled: registroDisponible && antesEnviada,
                           imageUrl: _photos['durante_misa'],
                           sent: _sentPhotos['durante_misa'] ?? false,
                           isSending: _photoSending == 'durante_misa',
@@ -372,7 +588,7 @@ class _RegistrarAsistenciaState extends State<RegistrarAsistencia> {
                           title: 'Al Finalizar',
                           description:
                               'Toma una foto al salir después de la misa',
-                          buttonEnabled: !_isUploading && duranteEnviada,
+                          buttonEnabled: registroDisponible && duranteEnviada,
                           imageUrl: _photos['al_finalizar'],
                           sent: _sentPhotos['al_finalizar'] ?? false,
                           isSending: _photoSending == 'al_finalizar',
@@ -491,6 +707,86 @@ class _ProgressCard extends StatelessWidget {
           const SizedBox(height: 8),
 
           Text(fecha, style: RegistrarAsistenciaStyles.dateText),
+        ],
+      ),
+    );
+  }
+}
+
+class _DiaMisaCard extends StatelessWidget {
+  final bool verificando;
+  final bool esDiaDeMisa;
+  final String mensaje;
+  final VoidCallback onReintentar;
+
+  const _DiaMisaCard({
+    required this.verificando,
+    required this.esDiaDeMisa,
+    required this.mensaje,
+    required this.onReintentar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final Color backgroundColor = verificando
+        ? Colors.blue.shade50
+        : esDiaDeMisa
+        ? Colors.green.shade50
+        : Colors.red.shade50;
+
+    final Color foregroundColor = verificando
+        ? Colors.blue.shade700
+        : esDiaDeMisa
+        ? Colors.green.shade700
+        : Colors.red.shade700;
+
+    final IconData icon = verificando
+        ? Icons.access_time
+        : esDiaDeMisa
+        ? Icons.check_circle
+        : Icons.event_busy;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: foregroundColor.withOpacity(0.30)),
+      ),
+      child: Row(
+        children: [
+          if (verificando)
+            SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: foregroundColor,
+              ),
+            )
+          else
+            Icon(icon, color: foregroundColor),
+
+          const SizedBox(width: 10),
+
+          Expanded(
+            child: Text(
+              verificando ? 'Verificando si hoy hay misa...' : mensaje,
+              style: TextStyle(
+                color: foregroundColor,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ),
+
+          if (!verificando && !esDiaDeMisa)
+            IconButton(
+              onPressed: onReintentar,
+              tooltip: 'Volver a verificar',
+              icon: Icon(Icons.refresh, color: foregroundColor),
+            ),
         ],
       ),
     );
@@ -625,7 +921,11 @@ class _PhotoCard extends StatelessWidget {
               width: double.infinity,
               height: 35,
               child: ElevatedButton.icon(
-                onPressed: sent || isSending ? null : onSend,
+                /*
+                 * También se utiliza buttonEnabled para
+                 * impedir enviar cuando no sea día de misa.
+                 */
+                onPressed: !buttonEnabled || sent || isSending ? null : onSend,
                 icon: isSending
                     ? const SizedBox(
                         width: 15,
@@ -643,7 +943,7 @@ class _PhotoCard extends StatelessWidget {
                       ? 'Evidencia Enviada'
                       : 'Enviar Evidencia',
                 ),
-                style: sent || isSending
+                style: !buttonEnabled || sent || isSending
                     ? RegistrarAsistenciaStyles.disabledButtonStyle
                     : RegistrarAsistenciaStyles.enabledButtonStyle,
               ),
