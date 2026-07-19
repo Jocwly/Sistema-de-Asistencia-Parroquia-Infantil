@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class Calendario extends StatefulWidget {
   const Calendario({super.key});
@@ -40,16 +41,28 @@ class _CalendarioState extends State<Calendario> {
   }
 
   Future<String> _obtenerEstadoMisa(DateTime date) async {
+    final usuario = FirebaseAuth.instance.currentUser;
+
+    if (usuario == null) {
+      return 'Pendiente';
+    }
+
+    final documentoId = '${usuario.uid}_${_fechaId(date)}';
+
     final doc = await FirebaseFirestore.instance
         .collection('asistencias')
-        .doc(_fechaId(date))
+        .doc(documentoId)
         .get();
 
     if (!doc.exists) {
       return 'Pendiente';
     }
 
-    final data = doc.data()!;
+    final data = doc.data();
+
+    if (data == null) {
+      return 'Pendiente';
+    }
 
     final fotos =
         [

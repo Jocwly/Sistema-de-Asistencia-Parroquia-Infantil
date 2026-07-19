@@ -17,7 +17,7 @@ class LoginStyles {
 
   // Tamaños
   static const double logoSize = 100;
-  static const double titleSpacing = 16;
+  static const double titleSpacing = 20;
   static const double sectionSpacing = 48;
   static const double fieldSpacing = 16;
 

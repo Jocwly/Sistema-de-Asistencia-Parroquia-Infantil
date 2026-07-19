@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:sapi/services/camera_service.dart';
 import 'package:sapi/services/cloudinary_service.dart';
+import 'package:sapi/services/misas_service.dart';
 import 'package:sapi/styles/registrar_asistencia_styles.dart';
 
 class RegistrarAsistencia extends StatefulWidget {
@@ -27,7 +28,10 @@ class _RegistrarAsistenciaState extends State<RegistrarAsistencia> {
   // Mensaje que se mostrará en la pantalla.
   String _mensajeDiaMisa = '';
 
+  MisaProgramada? _misaDeHoy;
+
   String nombreAlumno = '';
+  String apellidosAlumno = '';
   String grupoAlumno = '';
 
   final Map<String, String?> _photos = {
@@ -73,6 +77,7 @@ class _RegistrarAsistenciaState extends State<RegistrarAsistencia> {
 
       setState(() {
         nombreAlumno = data['nombre']?.toString() ?? '';
+        apellidosAlumno = data['apellidos']?.toString() ?? '';
         grupoAlumno = data['grupo']?.toString() ?? '';
       });
     } catch (e) {
@@ -92,70 +97,39 @@ class _RegistrarAsistenciaState extends State<RegistrarAsistencia> {
 
   /// Comprueba si el alumno puede registrar asistencia hoy.
   ///
-  /// Se permite cuando:
-  /// 1. Hoy es domingo.
-  /// 2. Hay un documento en misasEspeciales con la fecha de hoy.
+  /// Se permite cuando hoy es domingo o existe una misa especial
+  /// registrada por el administrador en la colección misas_especiales.
   Future<void> _verificarDiaDeMisa() async {
     if (mounted) {
       setState(() {
         _verificandoDiaMisa = true;
+        _mensajeDiaMisa = '';
       });
     }
 
     try {
-      final ahora = DateTime.now();
-      final hoy = DateTime(ahora.year, ahora.month, ahora.day);
-
-      /*
-       * Si hoy es domingo, se permite registrar asistencia
-       * sin consultar misasEspeciales.
-       */
-      if (ahora.weekday == DateTime.sunday) {
-        if (!mounted) return;
-
-        setState(() {
-          _esDiaDeMisa = true;
-          _verificandoDiaMisa = false;
-          _mensajeDiaMisa = 'Hoy es domingo. Puedes registrar tu asistencia.';
-        });
-
-        await _cargarEvidenciasDeHoy();
-        return;
-      }
-
-      /*
-       * Si no es domingo, busca una misa especial con fecha de hoy.
-       *
-       * Se consulta desde las 00:00 de hoy hasta antes de las
-       * 00:00 del día siguiente.
-       */
-      final inicioDelDia = hoy;
-      final inicioDiaSiguiente = hoy.add(const Duration(days: 1));
-
-      final resultado = await FirebaseFirestore.instance
-          .collection('misasEspeciales')
-          .where(
-            'fecha',
-            isGreaterThanOrEqualTo: Timestamp.fromDate(inicioDelDia),
-          )
-          .where('fecha', isLessThan: Timestamp.fromDate(inicioDiaSiguiente))
-          .limit(1)
-          .get();
-
-      final existeMisaEspecial = resultado.docs.isNotEmpty;
+      final misa = await MisasService.obtenerMisaProgramada(DateTime.now());
 
       if (!mounted) return;
 
       setState(() {
-        _esDiaDeMisa = existeMisaEspecial;
+        _misaDeHoy = misa;
+        _esDiaDeMisa = misa.existe;
         _verificandoDiaMisa = false;
 
-        _mensajeDiaMisa = existeMisaEspecial
-            ? 'Hoy hay una misa especial. Puedes registrar tu asistencia.'
-            : 'Hoy no hay misa programada. No puedes registrar asistencia.';
+        if (!misa.existe) {
+          _mensajeDiaMisa =
+              'Hoy no hay ninguna misa programada. No puedes registrar asistencia.';
+        } else if (misa.esDomingo) {
+          _mensajeDiaMisa =
+              'Hoy hay misa dominical. Puedes registrar tu asistencia.';
+        } else {
+          _mensajeDiaMisa =
+              'Hoy está programada: ${misa.nombre}. Puedes registrar tu asistencia.';
+        }
       });
 
-      if (existeMisaEspecial) {
+      if (misa.existe) {
         await _cargarEvidenciasDeHoy();
       }
     } catch (e) {
@@ -164,6 +138,7 @@ class _RegistrarAsistenciaState extends State<RegistrarAsistencia> {
       if (!mounted) return;
 
       setState(() {
+        _misaDeHoy = null;
         _esDiaDeMisa = false;
         _verificandoDiaMisa = false;
         _mensajeDiaMisa =
@@ -362,11 +337,17 @@ class _RegistrarAsistenciaState extends State<RegistrarAsistencia> {
           .set({
             'uidAlumno': usuario.uid,
             'nombreAlumno': nombreAlumno,
+            'apellidosAlumno': apellidosAlumno,
             'grupo': grupoAlumno,
             'correoAlumno': usuario.email ?? '',
             'fecha': Timestamp.fromDate(
               DateTime(ahora.year, ahora.month, ahora.day),
             ),
+            'tipoMisa': _misaDeHoy?.esDomingo == true
+                ? 'dominical'
+                : 'especial',
+            'nombreMisa': _misaDeHoy?.nombre ?? 'Misa',
+            'misaEspecialId': _misaDeHoy?.misaId,
             campoFoto: imageUrl,
             campoHora: hora,
             'actualizadoEn': FieldValue.serverTimestamp(),
@@ -400,36 +381,20 @@ class _RegistrarAsistenciaState extends State<RegistrarAsistencia> {
   /// la evidencia en la colección asistencias.
   Future<bool> _confirmarDiaDeMisaAntesDeEnviar() async {
     try {
-      final ahora = DateTime.now();
+      final misa = await MisasService.obtenerMisaProgramada(DateTime.now());
 
-      if (ahora.weekday == DateTime.sunday) {
-        return true;
-      }
-
-      final inicioDelDia = DateTime(ahora.year, ahora.month, ahora.day);
-
-      final inicioDiaSiguiente = inicioDelDia.add(const Duration(days: 1));
-
-      final resultado = await FirebaseFirestore.instance
-          .collection('misasEspeciales')
-          .where(
-            'fecha',
-            isGreaterThanOrEqualTo: Timestamp.fromDate(inicioDelDia),
-          )
-          .where('fecha', isLessThan: Timestamp.fromDate(inicioDiaSiguiente))
-          .limit(1)
-          .get();
-
-      if (resultado.docs.isNotEmpty) {
+      if (misa.existe) {
+        _misaDeHoy = misa;
         return true;
       }
 
       if (!mounted) return false;
 
       setState(() {
+        _misaDeHoy = null;
         _esDiaDeMisa = false;
         _mensajeDiaMisa =
-            'Hoy no hay misa programada. No puedes registrar asistencia.';
+            'Hoy no hay ninguna misa programada. No puedes registrar asistencia.';
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -540,8 +505,7 @@ class _RegistrarAsistenciaState extends State<RegistrarAsistencia> {
                             color: Colors.black87,
                           ),
                           title: 'Antes de la Misa',
-                          description:
-                              'Toma una foto antes de entrar a la iglesia',
+                          description: 'Toma una foto al iniciar la misa',
                           buttonEnabled: registroDisponible,
                           imageUrl: _photos['antes_misa'],
                           sent: _sentPhotos['antes_misa'] ?? false,
@@ -586,8 +550,7 @@ class _RegistrarAsistenciaState extends State<RegistrarAsistencia> {
                             color: Colors.black87,
                           ),
                           title: 'Al Finalizar',
-                          description:
-                              'Toma una foto al salir después de la misa',
+                          description: 'Toma una foto al finalizar la misa',
                           buttonEnabled: registroDisponible && duranteEnviada,
                           imageUrl: _photos['al_finalizar'],
                           sent: _sentPhotos['al_finalizar'] ?? false,

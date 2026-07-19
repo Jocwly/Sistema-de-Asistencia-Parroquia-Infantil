@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 
 class InicioAlumnoStyles {
   // Colores principales
-  static const Color backgroundColor = Color(0xFFF9F9F9);
+  static const Color backgroundColor = Color.fromARGB(
+    255,
+    255,
+    255,
+    255,
+  ); //Color(0xFFF9F9F9);
   static const Color primaryYellow = Color(0xFFFFC400);
   static const Color lightYellow = Color(0xFFFFF08A);
   static const Color borderYellow = Color(0xFFFFC400);
@@ -25,8 +30,8 @@ class InicioAlumnoStyles {
   );
 
   static const EdgeInsets cardPadding = EdgeInsets.symmetric(
-    horizontal: 12,
-    vertical: 10,
+    horizontal: 18,
+    vertical: 22,
   );
 
   // Textos
@@ -37,19 +42,19 @@ class InicioAlumnoStyles {
   );
 
   static const TextStyle welcomeText = TextStyle(
-    fontSize: 21,
+    fontSize: 25,
     fontWeight: FontWeight.w900,
     color: textPrimary,
   );
 
   static const TextStyle sundayTitle = TextStyle(
-    fontSize: 11,
+    fontSize: 14,
     fontWeight: FontWeight.w800,
     color: textPrimary,
   );
 
   static const TextStyle sundaySubtitle = TextStyle(
-    fontSize: 8,
+    fontSize: 10,
     fontWeight: FontWeight.w500,
     color: textSecondary,
   );
@@ -67,19 +72,19 @@ class InicioAlumnoStyles {
   );
 
   static const TextStyle sectionTitle = TextStyle(
-    fontSize: 10,
+    fontSize: 14,
     fontWeight: FontWeight.w900,
     color: textPrimary,
   );
 
   static const TextStyle attendanceDate = TextStyle(
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: FontWeight.w800,
     color: textPrimary,
   );
 
   static const TextStyle attendancePhotos = TextStyle(
-    fontSize: 8,
+    fontSize: 10,
     fontWeight: FontWeight.w500,
     color: textSecondary,
   );

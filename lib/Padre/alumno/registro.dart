@@ -190,7 +190,8 @@ class _RegistroState extends State<Registro> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Registro'), centerTitle: true),
+      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+      //appBar: AppBar(title: const Text('Registro'), centerTitle: true),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(

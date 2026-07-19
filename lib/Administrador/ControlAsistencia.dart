@@ -110,12 +110,16 @@ class _ControlAsistenciaState extends State<ControlAsistencia> {
     final finalizo = fotoDespues.isNotEmpty;
 
     final fecha = _convertirFecha(data['fecha']);
+    final nombre = data['nombreAlumno']?.toString() ?? '';
+    final apellidos = data['apellidosAlumno']?.toString() ?? '';
+
+    final nombreCompleto = '$nombre $apellidos'.trim();
 
     return {
       'idAsistencia': documento.id,
       'uidAlumno': data['uidAlumno']?.toString() ?? '',
-      'nombre': data['nombreAlumno']?.toString().trim().isNotEmpty == true
-          ? data['nombreAlumno'].toString()
+      'nombre': nombreCompleto.isNotEmpty
+          ? nombreCompleto
           : 'Alumno sin nombre',
       'grupo': data['grupo']?.toString() ?? 'Sin grupo',
       'edad': int.tryParse(data['edad']?.toString() ?? '0') ?? 0,

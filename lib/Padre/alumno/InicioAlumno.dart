@@ -18,11 +18,15 @@ class InicioAlumno extends StatefulWidget {
 class _InicioAlumnoState extends State<InicioAlumno> {
   String nombreAlumno = '';
   bool cargandoNombre = true;
+  bool cargandoMisa = true;
+  String tituloMisa = 'Consultando próximas misas...';
+  String subtituloMisa = '';
 
   @override
   void initState() {
     super.initState();
     obtenerNombreAlumno();
+    _cargarInformacionMisa();
   }
 
   Future<void> obtenerNombreAlumno() async {
@@ -59,6 +63,256 @@ class _InicioAlumnoState extends State<InicioAlumno> {
     }
   }
 
+  Future<void> _cargarInformacionMisa() async {
+    try {
+      final ahora = DateTime.now();
+
+      final hoy = DateTime(ahora.year, ahora.month, ahora.day);
+
+      final manana = hoy.add(const Duration(days: 1));
+
+      /*
+     * Primero se comprueba si el administrador registró
+     * una misa especial para el día de hoy.
+     */
+      final misasEspecialesDeHoy = await FirebaseFirestore.instance
+          .collection('misas_especiales')
+          .where('fecha', isGreaterThanOrEqualTo: Timestamp.fromDate(hoy))
+          .where('fecha', isLessThan: Timestamp.fromDate(manana))
+          .orderBy('fecha')
+          .get();
+
+      final hoyEsDomingo = hoy.weekday == DateTime.sunday;
+      final hayMisaEspecialHoy = misasEspecialesDeHoy.docs.isNotEmpty;
+
+      /*
+     * Puede ocurrir que hoy sea domingo y también exista
+     * una misa especial registrada por el administrador.
+     */
+      if (hoyEsDomingo && hayMisaEspecialHoy) {
+        final datos = misasEspecialesDeHoy.docs.first.data();
+
+        final nombreMisa = _obtenerNombreMisa(datos['nombre']);
+
+        if (!mounted) return;
+
+        setState(() {
+          cargandoMisa = false;
+          tituloMisa = '¡Hoy es domingo y hay misa especial!';
+          subtituloMisa =
+              'Misa dominical y $nombreMisa. Registra tu asistencia.';
+        });
+
+        return;
+      }
+
+      /*
+     * Si solamente es domingo, se muestra la misa dominical.
+     */
+      if (hoyEsDomingo) {
+        if (!mounted) return;
+
+        setState(() {
+          cargandoMisa = false;
+          tituloMisa = '¡Hoy es domingo!';
+          subtituloMisa = 'Hay misa dominical. Registra tu asistencia de hoy.';
+        });
+
+        return;
+      }
+
+      /*
+     * Si no es domingo, pero existe una misa especial hoy.
+     */
+      if (hayMisaEspecialHoy) {
+        final datos = misasEspecialesDeHoy.docs.first.data();
+
+        final nombreMisa = _obtenerNombreMisa(datos['nombre']);
+
+        if (!mounted) return;
+
+        setState(() {
+          cargandoMisa = false;
+          tituloMisa = '¡Hoy tienes una misa especial!';
+          subtituloMisa = '$nombreMisa. Puedes registrar tu asistencia.';
+        });
+
+        return;
+      }
+
+      /*
+     * Busca la siguiente misa especial después de hoy.
+     */
+      final proximasMisasEspeciales = await FirebaseFirestore.instance
+          .collection('misas_especiales')
+          .where('fecha', isGreaterThanOrEqualTo: Timestamp.fromDate(manana))
+          .orderBy('fecha')
+          .limit(1)
+          .get();
+
+      final proximoDomingo = _obtenerProximoDomingo(hoy);
+
+      /*
+     * Si no hay ninguna misa especial próxima,
+     * se muestra el siguiente domingo.
+     */
+      if (proximasMisasEspeciales.docs.isEmpty) {
+        if (!mounted) return;
+
+        setState(() {
+          cargandoMisa = false;
+          tituloMisa = 'Próxima misa dominical';
+          subtituloMisa = _formatearFechaMisa(proximoDomingo);
+        });
+
+        return;
+      }
+
+      final documentoMisa = proximasMisasEspeciales.docs.first;
+      final datosMisa = documentoMisa.data();
+
+      final fechaFirestore = datosMisa['fecha'];
+
+      if (fechaFirestore is! Timestamp) {
+        if (!mounted) return;
+
+        setState(() {
+          cargandoMisa = false;
+          tituloMisa = 'Próxima misa dominical';
+          subtituloMisa = _formatearFechaMisa(proximoDomingo);
+        });
+
+        return;
+      }
+
+      final fechaMisaEspecialOriginal = fechaFirestore.toDate();
+
+      final fechaMisaEspecial = DateTime(
+        fechaMisaEspecialOriginal.year,
+        fechaMisaEspecialOriginal.month,
+        fechaMisaEspecialOriginal.day,
+      );
+
+      final nombreMisa = _obtenerNombreMisa(datosMisa['nombre']);
+
+      /*
+     * Si la misa especial y el domingo son el mismo día,
+     * se muestran los dos eventos.
+     */
+      if (_esMismaFecha(fechaMisaEspecial, proximoDomingo)) {
+        if (!mounted) return;
+
+        setState(() {
+          cargandoMisa = false;
+          tituloMisa = 'Próximo domingo con misa especial';
+          subtituloMisa =
+              '$nombreMisa · ${_formatearFechaMisa(fechaMisaEspecial)}';
+        });
+
+        return;
+      }
+
+      /*
+     * Se muestra el evento que ocurra primero:
+     * la misa especial o el próximo domingo.
+     */
+      if (fechaMisaEspecial.isBefore(proximoDomingo)) {
+        if (!mounted) return;
+
+        setState(() {
+          cargandoMisa = false;
+          tituloMisa = 'Próxima misa especial';
+          subtituloMisa =
+              '$nombreMisa · ${_formatearFechaMisa(fechaMisaEspecial)}';
+        });
+      } else {
+        if (!mounted) return;
+
+        setState(() {
+          cargandoMisa = false;
+          tituloMisa = 'Próxima misa dominical';
+          subtituloMisa = _formatearFechaMisa(proximoDomingo);
+        });
+      }
+    } catch (error) {
+      debugPrint('Error al cargar la información de misas: $error');
+
+      if (!mounted) return;
+
+      final hoy = DateTime.now();
+      final proximoDomingo = _obtenerProximoDomingo(hoy);
+
+      setState(() {
+        cargandoMisa = false;
+        tituloMisa = 'Próxima misa dominical';
+        subtituloMisa = _formatearFechaMisa(proximoDomingo);
+      });
+    }
+  }
+
+  DateTime _obtenerProximoDomingo(DateTime fecha) {
+    final fechaNormalizada = DateTime(fecha.year, fecha.month, fecha.day);
+
+    int diasFaltantes = (DateTime.sunday - fechaNormalizada.weekday) % 7;
+
+    /*
+   * Cuando hoy sea domingo, se toma el domingo siguiente.
+   * Aunque este caso normalmente se maneja antes,
+   * se deja como protección adicional.
+   */
+    if (diasFaltantes == 0) {
+      diasFaltantes = 7;
+    }
+
+    return fechaNormalizada.add(Duration(days: diasFaltantes));
+  }
+
+  bool _esMismaFecha(DateTime fecha1, DateTime fecha2) {
+    return fecha1.year == fecha2.year &&
+        fecha1.month == fecha2.month &&
+        fecha1.day == fecha2.day;
+  }
+
+  String _obtenerNombreMisa(dynamic nombre) {
+    final texto = nombre?.toString().trim() ?? '';
+
+    if (texto.isEmpty) {
+      return 'Misa especial';
+    }
+
+    return texto;
+  }
+
+  String _formatearFechaMisa(DateTime fecha) {
+    const dias = [
+      'lunes',
+      'martes',
+      'miércoles',
+      'jueves',
+      'viernes',
+      'sábado',
+      'domingo',
+    ];
+
+    const meses = [
+      'enero',
+      'febrero',
+      'marzo',
+      'abril',
+      'mayo',
+      'junio',
+      'julio',
+      'agosto',
+      'septiembre',
+      'octubre',
+      'noviembre',
+      'diciembre',
+    ];
+
+    return '${dias[fecha.weekday - 1]} '
+        '${fecha.day} de ${meses[fecha.month - 1]}';
+  }
+
   Future<void> _cerrarSesion() async {
     await FirebaseAuth.instance.signOut();
 
@@ -90,89 +344,101 @@ class _InicioAlumnoState extends State<InicioAlumno> {
     return Scaffold(
       backgroundColor: InicioAlumnoStyles.backgroundColor,
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: InicioAlumnoStyles.screenPadding,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 6),
-                    _bienvenida(),
-                    const SizedBox(height: 6),
-                    _tarjetaDomingo(),
-                    const SizedBox(height: 14),
+        child: SingleChildScrollView(
+          padding: InicioAlumnoStyles.screenPadding,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 30),
+              _bienvenida(),
+              const SizedBox(height: 6),
+              _tarjetaDomingo(),
+              const SizedBox(height: 14),
 
-                    if (usuario != null)
-                      StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                        stream: FirebaseFirestore.instance
-                            .collection('asistencias')
-                            .where('uidAlumno', isEqualTo: usuario.uid)
-                            .snapshots(),
-                        builder: (context, snapshot) {
-                          if (snapshot.hasError) {
-                            return _mensajeError();
-                          }
+              if (usuario != null)
+                StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                  stream: FirebaseFirestore.instance
+                      .collection('asistencias')
+                      .where('uidAlumno', isEqualTo: usuario.uid)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return _mensajeError();
+                    }
 
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return const Center(
-                              child: Padding(
-                                padding: EdgeInsets.all(30),
-                                child: CircularProgressIndicator(
-                                  color: InicioAlumnoStyles.primaryYellow,
-                                ),
-                              ),
-                            );
-                          }
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(30),
+                          child: CircularProgressIndicator(
+                            color: InicioAlumnoStyles.primaryYellow,
+                          ),
+                        ),
+                      );
+                    }
 
-                          final asistencias =
-                              snapshot.data?.docs.toList() ?? [];
+                    final asistencias = snapshot.data?.docs.toList() ?? [];
 
-                          asistencias.sort((a, b) {
-                            final fechaA = _obtenerFecha(a.data()['fecha']);
-                            final fechaB = _obtenerFecha(b.data()['fecha']);
+                    asistencias.sort((a, b) {
+                      final fechaA = _obtenerFecha(a.data()['fecha']);
+                      final fechaB = _obtenerFecha(b.data()['fecha']);
 
-                            return fechaB.compareTo(fechaA);
-                          });
+                      return fechaB.compareTo(fechaA);
+                    });
 
-                          final completas = asistencias.where((documento) {
-                            final estado = documento
-                                .data()['estado']
-                                ?.toString()
-                                .toLowerCase();
+                    final completas = asistencias.where((documento) {
+                      final datos = documento.data();
+                      final estado = datos['estado']
+                          ?.toString()
+                          .trim()
+                          .toLowerCase();
 
-                            return estado == 'completa' || estado == 'completo';
+                      if (estado == 'completa' || estado == 'completo') {
+                        return true;
+                      }
+
+                      final fotos =
+                          [
+                            datos['fotoAntesUrl'],
+                            datos['fotoDuranteUrl'],
+                            datos['fotoDespuesUrl'],
+                          ].where((foto) {
+                            return foto != null &&
+                                foto.toString().trim().isNotEmpty;
                           }).length;
 
-                          final ultimasAsistencias = asistencias
-                              .take(2)
-                              .toList();
+                      return fotos == 3;
+                    }).length;
 
-                          return Column(
-                            children: [
-                              _estadisticas(
-                                totalMisas: asistencias.length,
-                                completas: completas,
-                              ),
-                              const SizedBox(height: 10),
-                              _ultimasAsistencias(
-                                asistencias: ultimasAsistencias,
-                              ),
-                            ],
-                          );
-                        },
-                      )
-                    else
-                      _mensajeSinSesion(),
-                  ],
-                ),
-              ),
-            ),
+                    final ultimasAsistencias = asistencias.take(2).toList();
 
-            _barraNavegacionInferior(),
-          ],
+                    return Column(
+                      children: [
+                        _estadisticas(
+                          totalMisas: asistencias.length,
+                          completas: completas,
+                        ),
+
+                        const SizedBox(height: 18),
+
+                        // Los botones ahora forman parte del contenido
+                        // desplazable de la pantalla.
+                        _barraNavegacionInferior(),
+
+                        const SizedBox(height: 18),
+
+                        // El recuadro se muestra debajo de los botones.
+                        _ultimasAsistencias(asistencias: ultimasAsistencias),
+
+                        const SizedBox(height: 24),
+                      ],
+                    );
+                  },
+                )
+              else
+                _mensajeSinSesion(),
+            ],
+          ),
         ),
       ),
     );
@@ -226,8 +492,6 @@ class _InicioAlumnoState extends State<InicioAlumno> {
   }
 
   Widget _tarjetaDomingo() {
-    final hoyEsDomingo = DateTime.now().weekday == DateTime.sunday;
-
     return Container(
       width: double.infinity,
       padding: InicioAlumnoStyles.cardPadding,
@@ -235,29 +499,56 @@ class _InicioAlumnoState extends State<InicioAlumno> {
       child: Row(
         children: [
           const Text('⛪', style: TextStyle(fontSize: 19)),
+
           const SizedBox(width: 10),
 
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  hoyEsDomingo ? '¡Hoy es domingo!' : 'Próxima misa dominical',
-                  style: InicioAlumnoStyles.sundayTitle,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  hoyEsDomingo
-                      ? 'Registra tu asistencia de hoy'
-                      : 'Consulta las próximas fechas',
-                  style: InicioAlumnoStyles.sundaySubtitle,
-                ),
-              ],
-            ),
+            child: cargandoMisa
+                ? const Row(
+                    children: [
+                      SizedBox(
+                        width: 17,
+                        height: 17,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: InicioAlumnoStyles.primaryYellow,
+                        ),
+                      ),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Consultando próximas misas...',
+                          style: InicioAlumnoStyles.sundayTitle,
+                        ),
+                      ),
+                    ],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        tituloMisa,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: InicioAlumnoStyles.sundayTitle,
+                      ),
+
+                      const SizedBox(height: 2),
+
+                      Text(
+                        subtituloMisa,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: InicioAlumnoStyles.sundaySubtitle,
+                      ),
+                    ],
+                  ),
           ),
 
+          const SizedBox(width: 8),
+
           SizedBox(
-            height: 26,
+            height: 40,
             child: ElevatedButton(
               onPressed: _abrirCalendario,
               style: ElevatedButton.styleFrom(
@@ -271,7 +562,7 @@ class _InicioAlumnoState extends State<InicioAlumno> {
               ),
               child: const Text(
                 'Calendario',
-                style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
               ),
             ),
           ),
@@ -302,12 +593,47 @@ class _InicioAlumnoState extends State<InicioAlumno> {
     );
   }
 
+  Widget _barraNavegacionInferior() {
+    return Container(
+      width: double.infinity,
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: _BottomNavigationItem(
+              icon: Icons.camera_alt_outlined,
+              label: 'Registrar Asistencia',
+              onTap: _abrirRegistrarAsistencia,
+            ),
+          ),
+
+          Expanded(
+            child: _BottomNavigationItem(
+              icon: Icons.history,
+              label: 'Historial',
+              onTap: _abrirHistorial,
+            ),
+          ),
+
+          Expanded(
+            child: _BottomNavigationItem(
+              icon: Icons.calendar_today_outlined,
+              label: 'Calendario',
+              onTap: _abrirCalendario,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _ultimasAsistencias({
     required List<QueryDocumentSnapshot<Map<String, dynamic>>> asistencias,
   }) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(9, 10, 9, 4),
+      padding: const EdgeInsets.fromLTRB(12, 18, 12, 18),
       decoration: InicioAlumnoStyles.recentAttendanceDecoration,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -347,52 +673,6 @@ class _InicioAlumnoState extends State<InicioAlumno> {
                 ],
               );
             }),
-        ],
-      ),
-    );
-  }
-
-  Widget _barraNavegacionInferior() {
-    return Container(
-      width: double.infinity,
-      height: 150,
-      color: Colors.white,
-      padding: const EdgeInsets.only(left: 22, right: 22, top: 8, bottom: 8),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              Expanded(
-                child: _BottomNavigationItem(
-                  icon: Icons.camera_alt_outlined,
-                  label: 'Registrar Asistencia',
-                  onTap: _abrirRegistrarAsistencia,
-                ),
-              ),
-
-              const SizedBox(width: 20),
-
-              Expanded(
-                child: _BottomNavigationItem(
-                  icon: Icons.history,
-                  label: 'Historial de Asistencias',
-                  onTap: _abrirHistorial,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          SizedBox(
-            width: 130,
-            child: _BottomNavigationItem(
-              icon: Icons.calendar_today_outlined,
-              label: 'Calendario de Asistencias',
-              onTap: _abrirCalendario,
-            ),
-          ),
         ],
       ),
     );
@@ -642,13 +922,13 @@ class _BottomNavigationItem extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 28,
-                height: 28,
+                width: 70,
+                height: 70,
                 decoration: BoxDecoration(
                   color: InicioAlumnoStyles.primaryYellow,
                   borderRadius: BorderRadius.circular(7),
                 ),
-                child: Icon(icon, color: Colors.white, size: 16),
+                child: Icon(icon, color: Colors.white, size: 24),
               ),
 
               const SizedBox(height: 6),
@@ -658,7 +938,9 @@ class _BottomNavigationItem extends StatelessWidget {
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: InicioAlumnoStyles.bottomNavigationText,
+                style: InicioAlumnoStyles.bottomNavigationText.copyWith(
+                  fontSize: 12,
+                ),
               ),
             ],
           ),

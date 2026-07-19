@@ -157,9 +157,10 @@ class _AlumnosCard extends StatelessWidget {
                   final data = doc.data();
 
                   final nombre = data['nombre'] ?? 'Sin nombre';
+                  final apellidos = data['apellidos'] ?? '';
                   final edad = data['edad']?.toString() ?? '-';
 
-                  return _AlumnoItem(nombre: nombre, edad: edad);
+                  return _AlumnoItem(nombre: '$nombre $apellidos', edad: edad);
                 }).toList(),
               );
             },

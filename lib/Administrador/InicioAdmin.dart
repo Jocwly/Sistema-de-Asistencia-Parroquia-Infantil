@@ -24,37 +24,41 @@ class InicioAdmin extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // ----- AppBar personalizada -----
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  PopupMenuButton<String>(
-                    icon: const CircleAvatar(
-                      backgroundColor: Color(0xFF1F2A44),
-                      child: Icon(Icons.person, color: Colors.white),
-                    ),
-                    onSelected: (value) {
-                      if (value == 'cerrar_sesion') {
-                        _cerrarSesion(context);
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: 'cerrar_sesion',
-                        child: Text('Cerrar sesión'),
+              SizedBox(
+                height: 50,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: PopupMenuButton<String>(
+                        icon: const CircleAvatar(
+                          backgroundColor: Color(0xFF1F2A44),
+                          child: Icon(Icons.person, color: Colors.white),
+                        ),
+                        onSelected: (value) {
+                          if (value == 'cerrar_sesion') {
+                            _cerrarSesion(context);
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(
+                            value: 'cerrar_sesion',
+                            child: Text('Cerrar sesión'),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  const Text(
-                    'Panel Principal',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.notifications_none, size: 28),
-                    onPressed: () {
-                      // Solo ícono, sin acción por ahora
-                    },
-                  ),
-                ],
+                    ),
+
+                    const Text(
+                      'Panel Principal',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 24),
 

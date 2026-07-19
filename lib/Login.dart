@@ -119,6 +119,7 @@ class _LoginState extends State<Login> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -133,7 +134,7 @@ class _LoginState extends State<Login> {
                   const SizedBox(height: LoginStyles.titleSpacing),
 
                   Text(
-                    'Catequesis',
+                    'Sistema de Asistencia Parroquia Infantil',
                     textAlign: TextAlign.center,
                     style: LoginStyles.titleStyle(context),
                   ),
@@ -141,12 +142,16 @@ class _LoginState extends State<Login> {
                   const SizedBox(height: LoginStyles.titleSpacing),
 
                   Text(
-                    'Control de Asistencia',
+                    'Inicia Sesión',
                     textAlign: TextAlign.center,
-                    style: LoginStyles.titleStyle(context),
+                    style: const TextStyle(
+                      fontSize: 25,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
                   ),
 
-                  const SizedBox(height: LoginStyles.sectionSpacing),
+                  const SizedBox(height: 25),
 
                   TextFormField(
                     controller: _userController,
