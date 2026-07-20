@@ -7,6 +7,13 @@ class GruposService {
     return _db.collection('grupos').orderBy('grupo').snapshots();
   }
 
+  Stream<QuerySnapshot<Map<String, dynamic>>> obtenerGruposRegistrados() {
+    return _db
+        .collection('usuarios')
+        .where('rol', isEqualTo: 'alumno')
+        .snapshots();
+  }
+
   Future<void> agregarGrupo({
     required String grupo,
     required String catequista,

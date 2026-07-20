@@ -359,7 +359,7 @@ class _ControlAsistenciaState extends State<ControlAsistencia> {
       padding: ControlAsistenciaStyles.campoHorizontalPadding,
       decoration: ControlAsistenciaStyles.filtroDecoration,
       child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: _gruposService.obtenerGrupos(),
+        stream: _gruposService.obtenerGruposRegistrados(),
         builder: (context, snapshotGrupos) {
           if (snapshotGrupos.connectionState == ConnectionState.waiting) {
             return const Center(
