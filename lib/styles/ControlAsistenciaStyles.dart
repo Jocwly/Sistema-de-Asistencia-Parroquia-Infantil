@@ -125,9 +125,6 @@ class ControlAsistenciaStyles {
 
   static const TextStyle textoEtapa = TextStyle(fontSize: 9);
 
-  // =========================
-  // DECORACIONES
-  // =========================
 
   static InputDecoration buscadorDecoration({
     required bool mostrarBotonLimpiar,

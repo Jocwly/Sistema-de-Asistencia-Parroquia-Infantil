@@ -777,7 +777,6 @@ class _GenerarReportesState extends State<GenerarReportes> {
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w900,
-              decoration: TextDecoration.underline,
             ),
           ),
 
