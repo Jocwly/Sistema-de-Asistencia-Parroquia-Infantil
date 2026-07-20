@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-
 import 'package:sapi/Administrador/Calendario.dart';
 import 'package:sapi/Administrador/ControlAsistencia.dart';
 import 'package:sapi/Administrador/GestionGrupos.dart';
@@ -150,12 +149,14 @@ class InicioAdmin extends StatelessWidget {
   Widget _construirEncabezado(BuildContext context) {
     return Row(
       children: [
+        const SizedBox(height: 20),
         const Expanded(
           child: Text(
             'Bienvenido, Admin!',
             style: InicioAdminStyles.tituloPrincipal,
           ),
         ),
+        const SizedBox(height: 20),
         PopupMenuButton<String>(
           tooltip: 'Opciones',
           onSelected: (value) {
@@ -230,23 +231,38 @@ class InicioAdmin extends StatelessWidget {
 
         Expanded(
           child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-            stream: GruposService().obtenerGrupos(),
+            stream: FirebaseFirestore.instance
+                .collection('usuarios')
+                .snapshots(),
             builder: (context, snapshot) {
-              final grupos =
-                  snapshot.data?.docs
-                      .map(
-                        (documento) =>
-                            documento.data()['grupo']?.toString().trim() ?? '',
-                      )
-                      .where((grupo) => grupo.isNotEmpty)
-                      .map((grupo) => grupo.toUpperCase())
-                      .toSet() ??
-                  <String>{};
+              if (snapshot.hasError) {
+                return const _ContadorCard(
+                  icono: Icons.groups_rounded,
+                  numero: 0,
+                  texto: 'Grupos',
+                  cargando: false,
+                );
+              }
+
+              final Set<String> gruposRegistrados = {};
+
+              if (snapshot.hasData) {
+                for (final documento in snapshot.data!.docs) {
+                  final data = documento.data();
+
+                  final grupo =
+                      data['grupo']?.toString().trim().toUpperCase() ?? '';
+
+                  if (grupo.isNotEmpty) {
+                    gruposRegistrados.add(grupo);
+                  }
+                }
+              }
 
               return _ContadorCard(
                 icono: Icons.groups_rounded,
-                numero: grupos.length,
-                texto: 'Grupos',
+                numero: gruposRegistrados.length,
+                texto: 'Grupos Activos',
                 cargando: snapshot.connectionState == ConnectionState.waiting,
               );
             },

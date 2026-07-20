@@ -11,7 +11,10 @@ class InicioAdminStyles {
   static const Color amarilloMuyClaro = Color(0xFFFFF8D7);
 
   static const Color naranja = Color(0xFFFF9500);
-  static const Color textoPrincipal = Color(0xFF111111);
+
+  // Un poco más negro
+  static const Color textoPrincipal = Color(0xFF080808);
+
   static const Color textoSecundario = Color(0xFF777777);
   static const Color borde = Color(0xFFFFC107);
 
@@ -24,15 +27,14 @@ class InicioAdminStyles {
   static const Color rojo = Color(0xFFFF6B6B);
   static const Color rojoClaro = Color(0xFFFFDEDE);
 
-  static const EdgeInsets paddingPantalla = EdgeInsets.symmetric(
-    horizontal: 14,
-    vertical: 12,
-  );
+  // Más espacio en la parte superior
+  static const EdgeInsets paddingPantalla = EdgeInsets.fromLTRB(16, 30, 16, 16);
 
   static const TextStyle tituloPrincipal = TextStyle(
-    fontSize: 25,
-    fontWeight: FontWeight.w800,
+    fontSize: 26,
+    fontWeight: FontWeight.w900,
     color: textoPrincipal,
+    height: 1.2,
   );
 
   static const TextStyle numeroContador = TextStyle(
