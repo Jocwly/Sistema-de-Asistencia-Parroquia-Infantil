@@ -34,41 +34,28 @@ class _GenerarReportesState extends State<GenerarReportes> {
   }
 
   Future<void> _cargarGrupos() async {
-    try {
-      final snapshot = await _firestore.collection('asistencias').get();
+    const gruposExistentes = [
+      '1A',
+      '1B',
+      '2A',
+      '2B',
+      '3A',
+      '3B',
+      '4A',
+      '4B',
+      '5A',
+      '5B',
+      '6A',
+      '6B',
+    ];
 
-      final gruposEncontrados =
-          snapshot.docs
-              .map((documento) {
-                final data = documento.data();
-                return _leerTexto(data, ['grupo']);
-              })
-              .where((grupo) => grupo.isNotEmpty)
-              .toSet()
-              .toList()
-            ..sort();
+    if (!mounted) return;
 
-      if (!mounted) return;
+    setState(() {
+      _grupos = ['Todos los grupos', ...gruposExistentes];
 
-      setState(() {
-        _grupos = ['Todos los grupos', ...gruposEncontrados];
-
-        _cargandoGrupos = false;
-      });
-    } catch (error) {
-      if (!mounted) return;
-
-      setState(() {
-        _cargandoGrupos = false;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('No fue posible cargar los grupos: $error'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
+      _cargandoGrupos = false;
+    });
   }
 
   Future<void> _generarReporte() async {
@@ -774,10 +761,7 @@ class _GenerarReportesState extends State<GenerarReportes> {
         children: [
           const Text(
             'Configurar Reporte',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-            ),
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
           ),
 
           const SizedBox(height: 14),

@@ -114,16 +114,14 @@ class _CalendarioAdminState extends State<CalendarioAdmin> {
               final hoy = _normalizarFecha(DateTime.now());
               final manana = hoy.add(const Duration(days: 1));
 
-              final fechaInicialPicker = misaExistente == null
-                  ? (fechaSeleccionada.isAfter(hoy)
-                        ? fechaSeleccionada
-                        : manana)
-                  : fechaSeleccionada;
+              final fechaInicialPicker = fechaSeleccionada.isAfter(hoy)
+                  ? fechaSeleccionada
+                  : manana;
 
               final nuevaFecha = await showDatePicker(
                 context: dialogContext,
                 initialDate: fechaInicialPicker,
-                firstDate: misaExistente == null ? manana : DateTime(2020),
+                firstDate: manana,
                 lastDate: DateTime(2100),
                 helpText: 'Selecciona una fecha futura',
                 cancelText: 'Cancelar',
@@ -147,8 +145,7 @@ class _CalendarioAdminState extends State<CalendarioAdmin> {
                 );
                 return;
               }
-              if (misaExistente == null &&
-                  _esFechaAnteriorOActual(fechaSeleccionada)) {
+              if (_esFechaAnteriorOActual(fechaSeleccionada)) {
                 ScaffoldMessenger.of(this.context).showSnackBar(
                   const SnackBar(
                     content: Text(
@@ -156,6 +153,7 @@ class _CalendarioAdminState extends State<CalendarioAdmin> {
                     ),
                   ),
                 );
+
                 return;
               }
 
