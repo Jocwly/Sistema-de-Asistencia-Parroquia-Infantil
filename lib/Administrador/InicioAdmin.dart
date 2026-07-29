@@ -602,11 +602,9 @@ class _AsistenciasRecientes extends StatelessWidget {
                   final fecha = _convertirFecha(data['fecha']);
                   final estado = _obtenerEstado(data);
 
-                  return _AsistenciaRecienteItem(
-                    iniciales: _obtenerIniciales(nombre),
-                    nombre: nombre,
+                  return _AsistenciaRecienteConUsuario(
+                    datosAsistencia: data,
                     fecha: _formatearFecha(fecha),
-                    grupo: grupo,
                     estado: estado,
                   );
                 },
@@ -615,6 +613,94 @@ class _AsistenciasRecientes extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _AsistenciaRecienteConUsuario extends StatelessWidget {
+  final Map<String, dynamic> datosAsistencia;
+  final String fecha;
+  final String estado;
+
+  const _AsistenciaRecienteConUsuario({
+    required this.datosAsistencia,
+    required this.fecha,
+    required this.estado,
+  });
+
+  String _nombreDesdeAsistencia() {
+    final nombre = datosAsistencia['nombreAlumno']?.toString().trim() ?? '';
+    final apellidos =
+        datosAsistencia['apellidosAlumno']?.toString().trim() ?? '';
+    final nombreCompleto = '$nombre $apellidos'.trim();
+
+    return nombreCompleto.isEmpty ? 'Alumno sin nombre' : nombreCompleto;
+  }
+
+  String _grupoDesdeAsistencia() {
+    final grupo = datosAsistencia['grupo']?.toString().trim() ?? '';
+    return grupo.isEmpty ? 'Sin grupo' : grupo;
+  }
+
+  String _obtenerIniciales(String nombre) {
+    final partes = nombre
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((parte) => parte.isNotEmpty)
+        .toList();
+
+    if (partes.isEmpty) return '?';
+    if (partes.length == 1) return partes.first[0].toUpperCase();
+
+    return '${partes[0][0]}${partes[1][0]}'.toUpperCase();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final uidAlumno = datosAsistencia['uidAlumno']?.toString().trim() ?? '';
+
+    if (uidAlumno.isEmpty) {
+      final nombre = _nombreDesdeAsistencia();
+
+      return _AsistenciaRecienteItem(
+        iniciales: _obtenerIniciales(nombre),
+        nombre: nombre,
+        fecha: fecha,
+        grupo: _grupoDesdeAsistencia(),
+        estado: estado,
+      );
+    }
+
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(uidAlumno)
+          .snapshots(),
+      builder: (context, snapshot) {
+        final usuario = snapshot.data?.data();
+
+        final nombreUsuario = usuario?['nombre']?.toString().trim() ?? '';
+        final apellidosUsuario = usuario?['apellidos']?.toString().trim() ?? '';
+        final nombreActual = '$nombreUsuario $apellidosUsuario'.trim();
+
+        final grupoActual = usuario?['grupo']?.toString().trim() ?? '';
+
+        final nombre = nombreActual.isNotEmpty
+            ? nombreActual
+            : _nombreDesdeAsistencia();
+
+        final grupo = grupoActual.isNotEmpty
+            ? grupoActual
+            : _grupoDesdeAsistencia();
+
+        return _AsistenciaRecienteItem(
+          iniciales: _obtenerIniciales(nombre),
+          nombre: nombre,
+          fecha: fecha,
+          grupo: grupo,
+          estado: estado,
+        );
+      },
     );
   }
 }

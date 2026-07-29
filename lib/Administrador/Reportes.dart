@@ -66,6 +66,15 @@ class _GenerarReportesState extends State<GenerarReportes> {
     });
 
     try {
+      // Obtiene los datos actuales de los alumnos.
+      final snapshotUsuarios = await _firestore.collection('usuarios').get();
+
+      final Map<String, Map<String, dynamic>> usuariosPorUid = {};
+
+      for (final documentoUsuario in snapshotUsuarios.docs) {
+        usuariosPorUid[documentoUsuario.id] = documentoUsuario.data();
+      }
+
       final snapshot = await _firestore
           .collection('asistencias')
           .orderBy('fecha', descending: true)
@@ -76,7 +85,25 @@ class _GenerarReportesState extends State<GenerarReportes> {
       for (final documento in snapshot.docs) {
         final data = documento.data();
 
-        final grupo = _leerTexto(data, ['grupo']);
+        final uidAlumno = _leerTexto(data, [
+          'uidAlumno',
+          'alumnoId',
+          'uid',
+          'idAlumno',
+        ]);
+
+        final usuarioActual = usuariosPorUid[uidAlumno];
+
+        // Primero toma el grupo actual del usuario.
+        // Si no encuentra el usuario, usa el grupo guardado en la asistencia.
+        final grupoActual = usuarioActual == null
+            ? ''
+            : _leerTexto(usuarioActual, ['grupo']);
+
+        final grupoAsistencia = _leerTexto(data, ['grupo']);
+
+        final grupo = grupoActual.isNotEmpty ? grupoActual : grupoAsistencia;
+
         final fecha = _leerFecha(data['fecha']);
 
         if (fecha == null) {
@@ -98,13 +125,8 @@ class _GenerarReportesState extends State<GenerarReportes> {
         registros.add(
           RegistroReporte(
             id: documento.id,
-            uidAlumno: _leerTexto(data, [
-              'uidAlumno',
-              'alumnoId',
-              'uid',
-              'idAlumno',
-            ]),
-            nombre: _obtenerNombreAlumno(data),
+            uidAlumno: uidAlumno,
+            nombre: _obtenerNombreAlumnoActual(usuarioActual, data),
             grupo: grupo.isEmpty ? 'Sin grupo' : grupo,
             fecha: fecha,
             estado: _obtenerEstado(data),
@@ -163,6 +185,24 @@ class _GenerarReportesState extends State<GenerarReportes> {
         ),
       );
     }
+  }
+
+  String _obtenerNombreAlumnoActual(
+    Map<String, dynamic>? usuarioActual,
+    Map<String, dynamic> asistencia,
+  ) {
+    if (usuarioActual != null) {
+      final nombre = _leerTexto(usuarioActual, ['nombre', 'nombres']);
+
+      final apellidos = _leerTexto(usuarioActual, ['apellidos']);
+      final nombreCompleto = '$nombre $apellidos'.trim();
+
+      if (nombreCompleto.isNotEmpty) {
+        return nombreCompleto;
+      }
+    }
+
+    return _obtenerNombreAlumno(asistencia);
   }
 
   String _obtenerNombreAlumno(Map<String, dynamic> data) {

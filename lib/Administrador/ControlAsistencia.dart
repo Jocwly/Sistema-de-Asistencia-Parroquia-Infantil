@@ -98,6 +98,7 @@ class _ControlAsistenciaState extends State<ControlAsistencia> {
 
   Map<String, dynamic> _convertirDocumento(
     QueryDocumentSnapshot<Map<String, dynamic>> documento,
+    Map<String, dynamic>? usuarioActual,
   ) {
     final data = documento.data();
 
@@ -110,8 +111,31 @@ class _ControlAsistenciaState extends State<ControlAsistencia> {
     final finalizo = fotoDespues.isNotEmpty;
 
     final fecha = _convertirFecha(data['fecha']);
-    final nombre = data['nombreAlumno']?.toString() ?? '';
-    final apellidos = data['apellidosAlumno']?.toString() ?? '';
+
+    final nombre =
+        usuarioActual?['nombre']?.toString().trim().isNotEmpty == true
+        ? usuarioActual!['nombre'].toString().trim()
+        : data['nombreAlumno']?.toString().trim() ?? '';
+
+    final apellidos =
+        usuarioActual?['apellidos']?.toString().trim().isNotEmpty == true
+        ? usuarioActual!['apellidos'].toString().trim()
+        : data['apellidosAlumno']?.toString().trim() ?? '';
+
+    final grupo = usuarioActual?['grupo']?.toString().trim().isNotEmpty == true
+        ? usuarioActual!['grupo'].toString().trim()
+        : data['grupo']?.toString().trim() ?? 'Sin grupo';
+
+    final edad =
+        int.tryParse(
+          usuarioActual?['edad']?.toString() ?? data['edad']?.toString() ?? '0',
+        ) ??
+        0;
+
+    final correo =
+        usuarioActual?['correo']?.toString().trim().isNotEmpty == true
+        ? usuarioActual!['correo'].toString().trim()
+        : data['correoAlumno']?.toString().trim() ?? '';
 
     final nombreCompleto = '$nombre $apellidos'.trim();
 
@@ -121,9 +145,9 @@ class _ControlAsistenciaState extends State<ControlAsistencia> {
       'nombre': nombreCompleto.isNotEmpty
           ? nombreCompleto
           : 'Alumno sin nombre',
-      'grupo': data['grupo']?.toString() ?? 'Sin grupo',
-      'edad': int.tryParse(data['edad']?.toString() ?? '0') ?? 0,
-      'correoAlumno': data['correoAlumno']?.toString() ?? '',
+      'grupo': grupo,
+      'edad': edad,
+      'correoAlumno': correo,
       'fechaDateTime': fecha,
       'fecha': _formatearFechaCompleta(fecha),
       'estado': antes && durante && finalizo
@@ -430,18 +454,15 @@ class _ControlAsistenciaState extends State<ControlAsistencia> {
 
   Widget _construirListaAsistencias() {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance
-          .collection('asistencias')
-          .orderBy('fecha', descending: true)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
+      stream: FirebaseFirestore.instance.collection('usuarios').snapshots(),
+      builder: (context, snapshotUsuarios) {
+        if (snapshotUsuarios.hasError) {
           return Center(
             child: Padding(
               padding: ControlAsistenciaStyles.mensajeErrorPadding,
               child: Text(
-                'No se pudieron cargar las asistencias.\n'
-                '${snapshot.error}',
+                'No se pudieron cargar los alumnos.\n'
+                '${snapshotUsuarios.error}',
                 textAlign: TextAlign.center,
                 style: ControlAsistenciaStyles.textoError,
               ),
@@ -449,7 +470,7 @@ class _ControlAsistenciaState extends State<ControlAsistencia> {
           );
         }
 
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        if (snapshotUsuarios.connectionState == ConnectionState.waiting) {
           return const Center(
             child: CircularProgressIndicator(
               color: ControlAsistenciaStyles.amarillo,
@@ -457,39 +478,85 @@ class _ControlAsistenciaState extends State<ControlAsistencia> {
           );
         }
 
-        final documentos = snapshot.data?.docs ?? [];
+        final Map<String, Map<String, dynamic>> usuariosPorUid = {};
 
-        final alumnos = documentos.map(_convertirDocumento).toList();
-
-        final alumnosFiltrados = _filtrarAlumnos(alumnos, _grupoSeleccionado);
-
-        if (alumnosFiltrados.isEmpty) {
-          return const Center(
-            child: Text(
-              'No se encontraron registros',
-              style: ControlAsistenciaStyles.textoSinResultados,
-            ),
-          );
+        for (final documentoUsuario in snapshotUsuarios.data?.docs ?? []) {
+          usuariosPorUid[documentoUsuario.id] = documentoUsuario.data();
         }
 
-        return ListView(
-          padding: ControlAsistenciaStyles.listaPadding,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                '${alumnosFiltrados.length} registro(s)',
-                style: ControlAsistenciaStyles.textoContadorRegistros,
-              ),
-            ),
-            ...alumnosFiltrados.map(
-              (alumno) => _TarjetaAlumno(
-                alumno: alumno,
-                iniciales: _obtenerIniciales(alumno['nombre'].toString()),
-                onVerEvidencia: () => _abrirEvidencia(alumno),
-              ),
-            ),
-          ],
+        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: FirebaseFirestore.instance
+              .collection('asistencias')
+              .orderBy('fecha', descending: true)
+              .snapshots(),
+          builder: (context, snapshotAsistencias) {
+            if (snapshotAsistencias.hasError) {
+              return Center(
+                child: Padding(
+                  padding: ControlAsistenciaStyles.mensajeErrorPadding,
+                  child: Text(
+                    'No se pudieron cargar las asistencias.\n'
+                    '${snapshotAsistencias.error}',
+                    textAlign: TextAlign.center,
+                    style: ControlAsistenciaStyles.textoError,
+                  ),
+                ),
+              );
+            }
+
+            if (snapshotAsistencias.connectionState ==
+                ConnectionState.waiting) {
+              return const Center(
+                child: CircularProgressIndicator(
+                  color: ControlAsistenciaStyles.amarillo,
+                ),
+              );
+            }
+
+            final documentos = snapshotAsistencias.data?.docs ?? [];
+
+            final alumnos = documentos.map((documento) {
+              final dataAsistencia = documento.data();
+              final uidAlumno = dataAsistencia['uidAlumno']?.toString() ?? '';
+              final usuarioActual = usuariosPorUid[uidAlumno];
+
+              return _convertirDocumento(documento, usuarioActual);
+            }).toList();
+
+            final alumnosFiltrados = _filtrarAlumnos(
+              alumnos,
+              _grupoSeleccionado,
+            );
+
+            if (alumnosFiltrados.isEmpty) {
+              return const Center(
+                child: Text(
+                  'No se encontraron registros',
+                  style: ControlAsistenciaStyles.textoSinResultados,
+                ),
+              );
+            }
+
+            return ListView(
+              padding: ControlAsistenciaStyles.listaPadding,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    '${alumnosFiltrados.length} registro(s)',
+                    style: ControlAsistenciaStyles.textoContadorRegistros,
+                  ),
+                ),
+                ...alumnosFiltrados.map(
+                  (alumno) => _TarjetaAlumno(
+                    alumno: alumno,
+                    iniciales: _obtenerIniciales(alumno['nombre'].toString()),
+                    onVerEvidencia: () => _abrirEvidencia(alumno),
+                  ),
+                ),
+              ],
+            );
+          },
         );
       },
     );

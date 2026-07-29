@@ -325,6 +325,311 @@ class _InicioAlumnoState extends State<InicioAlumno> {
     );
   }
 
+  Future<void> _editarInformacion() async {
+    final usuario = FirebaseAuth.instance.currentUser;
+
+    if (usuario == null) return;
+
+    try {
+      final documento = await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(usuario.uid)
+          .get();
+
+      if (!documento.exists || !mounted) return;
+
+      final datos = documento.data() ?? {};
+
+      final nombreController = TextEditingController(
+        text: datos['nombre']?.toString() ?? '',
+      );
+
+      final apellidosController = TextEditingController(
+        text: datos['apellidos']?.toString() ?? '',
+      );
+
+      String nivelSeleccionado =
+          datos['nivel']?.toString().trim().toUpperCase() ?? 'PRIMARIA';
+
+      const gruposPrimaria = [
+        '2A',
+        '2B',
+        '3A',
+        '3B',
+        '4A',
+        '4B',
+        '5A',
+        '5B',
+        '6A',
+        '6B',
+      ];
+
+      const gruposSecundaria = ['1A', '1B'];
+
+      List<String> obtenerGrupos() {
+        return nivelSeleccionado == 'SECUNDARIA'
+            ? gruposSecundaria
+            : gruposPrimaria;
+      }
+
+      if (nivelSeleccionado != 'PRIMARIA' &&
+          nivelSeleccionado != 'SECUNDARIA') {
+        nivelSeleccionado = 'PRIMARIA';
+      }
+
+      String grupoSeleccionado = datos['grupo']?.toString().trim() ?? '';
+
+      if (!obtenerGrupos().contains(grupoSeleccionado)) {
+        grupoSeleccionado = obtenerGrupos().first;
+      }
+
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          bool guardando = false;
+
+          return StatefulBuilder(
+            builder: (context, setStateDialog) {
+              return AlertDialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                title: const Row(
+                  children: [
+                    Icon(
+                      Icons.edit_outlined,
+                      color: InicioAlumnoStyles.primaryYellow,
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(child: Text('Editar información')),
+                  ],
+                ),
+                content: SingleChildScrollView(
+                  child: SizedBox(
+                    width: 350,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextField(
+                          controller: nombreController,
+                          enabled: !guardando,
+                          textCapitalization: TextCapitalization.words,
+                          decoration: InputDecoration(
+                            labelText: 'Nombre',
+                            prefixIcon: const Icon(Icons.person_outline),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        TextField(
+                          controller: apellidosController,
+                          enabled: !guardando,
+                          textCapitalization: TextCapitalization.words,
+                          decoration: InputDecoration(
+                            labelText: 'Apellidos',
+                            prefixIcon: const Icon(Icons.badge_outlined),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        DropdownButtonFormField<String>(
+                          initialValue: nivelSeleccionado,
+                          decoration: InputDecoration(
+                            labelText: 'Nivel',
+                            prefixIcon: const Icon(Icons.school_outlined),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'PRIMARIA',
+                              child: Text('Primaria'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'SECUNDARIA',
+                              child: Text('Secundaria'),
+                            ),
+                          ],
+                          onChanged: guardando
+                              ? null
+                              : (nuevoNivel) {
+                                  if (nuevoNivel == null) return;
+
+                                  setStateDialog(() {
+                                    nivelSeleccionado = nuevoNivel;
+                                    grupoSeleccionado = obtenerGrupos().first;
+                                  });
+                                },
+                        ),
+                        const SizedBox(height: 14),
+                        DropdownButtonFormField<String>(
+                          key: ValueKey(
+                            '$nivelSeleccionado-$grupoSeleccionado',
+                          ),
+                          initialValue: grupoSeleccionado,
+                          decoration: InputDecoration(
+                            labelText: 'Grado y grupo',
+                            prefixIcon: const Icon(Icons.groups_outlined),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          items: obtenerGrupos().map((grupo) {
+                            return DropdownMenuItem<String>(
+                              value: grupo,
+                              child: Text(grupo),
+                            );
+                          }).toList(),
+                          onChanged: guardando
+                              ? null
+                              : (nuevoGrupo) {
+                                  if (nuevoGrupo == null) return;
+
+                                  setStateDialog(() {
+                                    grupoSeleccionado = nuevoGrupo;
+                                  });
+                                },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: guardando
+                        ? null
+                        : () {
+                            Navigator.pop(dialogContext);
+                          },
+                    child: const Text('Cancelar'),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: InicioAlumnoStyles.primaryYellow,
+                      foregroundColor: Colors.black,
+                    ),
+                    onPressed: guardando
+                        ? null
+                        : () async {
+                            final nombre = nombreController.text.trim();
+                            final apellidos = apellidosController.text.trim();
+
+                            if (nombre.isEmpty || apellidos.isEmpty) {
+                              ScaffoldMessenger.of(this.context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Completa el nombre y los apellidos.',
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
+
+                            final contieneNumeros =
+                                RegExp(r'[0-9]').hasMatch(nombre) ||
+                                RegExp(r'[0-9]').hasMatch(apellidos);
+
+                            if (contieneNumeros) {
+                              ScaffoldMessenger.of(this.context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'El nombre y los apellidos no deben contener números.',
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
+
+                            setStateDialog(() {
+                              guardando = true;
+                            });
+
+                            try {
+                              await FirebaseFirestore.instance
+                                  .collection('usuarios')
+                                  .doc(usuario.uid)
+                                  .update({
+                                    'nombre': nombre,
+                                    'apellidos': apellidos,
+                                    'nivel': nivelSeleccionado,
+                                    'grupo': grupoSeleccionado,
+                                    'fechaActualizacion':
+                                        FieldValue.serverTimestamp(),
+                                  });
+
+                              if (!mounted) return;
+
+                              setState(() {
+                                nombreAlumno = nombre;
+                              });
+
+                              if (dialogContext.mounted) {
+                                Navigator.pop(dialogContext);
+                              }
+
+                              ScaffoldMessenger.of(this.context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Información actualizada correctamente.',
+                                  ),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            } catch (error) {
+                              if (!dialogContext.mounted) return;
+
+                              setStateDialog(() {
+                                guardando = false;
+                              });
+
+                              ScaffoldMessenger.of(this.context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'No fue posible actualizar la información: $error',
+                                  ),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          },
+                    child: guardando
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.black,
+                            ),
+                          )
+                        : const Text('Guardar'),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
+
+      nombreController.dispose();
+      apellidosController.dispose();
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No fue posible cargar la información: $error'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   void _abrirRegistrarAsistencia() {
     Navigator.pushNamed(context, RegistrarAsistencia.routeName);
   }
@@ -473,6 +778,10 @@ class _InicioAlumnoState extends State<InicioAlumno> {
             if (value == 'cerrar_sesion') {
               _cerrarSesion();
             }
+
+            if (value == 'editar_informacion') {
+              _editarInformacion();
+            }
           },
           itemBuilder: (context) => const [
             PopupMenuItem<String>(
@@ -482,6 +791,17 @@ class _InicioAlumnoState extends State<InicioAlumno> {
                   Icon(Icons.logout),
                   SizedBox(width: 8),
                   Text('Cerrar sesión'),
+                ],
+              ),
+            ),
+            PopupMenuDivider(),
+            PopupMenuItem<String>(
+              value: 'editar_informacion',
+              child: Row(
+                children: [
+                  Icon(Icons.edit_outlined),
+                  SizedBox(width: 8),
+                  Text('Editar información'),
                 ],
               ),
             ),
