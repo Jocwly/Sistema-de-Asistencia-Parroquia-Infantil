@@ -33,12 +33,6 @@ class _LoginState extends State<Login> {
   Future<void> _onLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_userController.text.trim() == 'admin@gmail.com' &&
-        _passwordController.text.trim() == 'admin123') {
-      Navigator.pushReplacementNamed(context, InicioAdmin.routeName);
-      return;
-    }
-
     setState(() => _isLoading = true);
 
     try {
@@ -46,6 +40,15 @@ class _LoginState extends State<Login> {
         email: _userController.text.trim(),
         password: _passwordController.text.trim(),
       );
+
+      if (!mounted) return;
+
+      // Si es el administrador, entra directamente a su pantalla.
+      // La cuenta ya quedó autenticada en Firebase.
+      if (credential.user?.email == 'admin@gmail.com') {
+        Navigator.pushReplacementNamed(context, InicioAdmin.routeName);
+        return;
+      }
 
       final uid = credential.user!.uid;
 
@@ -57,6 +60,8 @@ class _LoginState extends State<Login> {
       if (!mounted) return;
 
       if (!userDoc.exists) {
+        await FirebaseAuth.instance.signOut();
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('No se encontraron datos del usuario'),
@@ -74,6 +79,8 @@ class _LoginState extends State<Login> {
       } else if (rol == 'alumno') {
         Navigator.pushReplacementNamed(context, InicioAlumno.routeName);
       } else {
+        await FirebaseAuth.instance.signOut();
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Rol de usuario no válido'),
@@ -86,8 +93,8 @@ class _LoginState extends State<Login> {
 
       if (e.code == 'invalid-email') {
         mensaje = 'Correo inválido';
-      } else if (e.code == 'user-not-found') {
-        mensaje = 'Usuario no encontrado';
+      } else if (e.code == 'user-not-found' || e.code == 'invalid-credential') {
+        mensaje = 'Usuario o contraseña incorrectos';
       } else if (e.code == 'wrong-password') {
         mensaje = 'Contraseña incorrecta';
       }
