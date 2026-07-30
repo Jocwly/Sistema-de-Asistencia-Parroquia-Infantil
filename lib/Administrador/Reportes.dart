@@ -17,45 +17,46 @@ class GenerarReportes extends StatefulWidget {
 class _GenerarReportesState extends State<GenerarReportes> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  String? _nivelSeleccionado;
   String _grupoSeleccionado = 'Todos los grupos';
+
   DateTime? _fechaSeleccionada;
 
-  List<String> _grupos = ['Todos los grupos'];
+  final List<String> gruposPrimaria = const [
+    '2A',
+    '2B',
+    '3A',
+    '3B',
+    '4A',
+    '4B',
+    '5A',
+    '5B',
+    '6A',
+    '6B',
+  ];
+
+  final List<String> gruposSecundaria = const ['1A', '1B'];
+
+  List<String> get gruposDelNivel {
+    if (_nivelSeleccionado == 'PRIMARIA') {
+      return gruposPrimaria;
+    }
+
+    if (_nivelSeleccionado == 'SECUNDARIA') {
+      return gruposSecundaria;
+    }
+
+    return [];
+  }
+
   List<RegistroReporte> _registros = [];
 
-  bool _cargandoGrupos = true;
   bool _generandoReporte = false;
   bool _reporteGenerado = false;
 
   @override
   void initState() {
     super.initState();
-    _cargarGrupos();
-  }
-
-  Future<void> _cargarGrupos() async {
-    const gruposExistentes = [
-      '1A',
-      '1B',
-      '2A',
-      '2B',
-      '3A',
-      '3B',
-      '4A',
-      '4B',
-      '5A',
-      '5B',
-      '6A',
-      '6B',
-    ];
-
-    if (!mounted) return;
-
-    setState(() {
-      _grupos = ['Todos los grupos', ...gruposExistentes];
-
-      _cargandoGrupos = false;
-    });
   }
 
   Future<void> _generarReporte() async {
@@ -103,12 +104,22 @@ class _GenerarReportesState extends State<GenerarReportes> {
         final grupoAsistencia = _leerTexto(data, ['grupo']);
 
         final grupo = grupoActual.isNotEmpty ? grupoActual : grupoAsistencia;
+        final nivelActual = usuarioActual == null
+            ? ''
+            : _leerTexto(usuarioActual, ['nivel']).toUpperCase();
+
+        final nivelAsistencia = _leerTexto(data, ['nivel']).toUpperCase();
+
+        final nivel = nivelActual.isNotEmpty ? nivelActual : nivelAsistencia;
 
         final fecha = _leerFecha(data['fecha']);
 
         if (fecha == null) {
           continue;
         }
+
+        final cumpleNivel =
+            _nivelSeleccionado == null || nivel == _nivelSeleccionado;
 
         final cumpleGrupo =
             _grupoSeleccionado == 'Todos los grupos' ||
@@ -118,7 +129,7 @@ class _GenerarReportesState extends State<GenerarReportes> {
             _fechaSeleccionada == null ||
             _esMismoDia(fecha, _fechaSeleccionada!);
 
-        if (!cumpleGrupo || !cumpleFecha) {
+        if (!cumpleNivel || !cumpleGrupo || !cumpleFecha) {
           continue;
         }
 
@@ -497,6 +508,13 @@ class _GenerarReportesState extends State<GenerarReportes> {
             pw.SizedBox(height: 8),
 
             pw.Text(
+              'Nivel: ${_nivelSeleccionado ?? 'Todos los niveles'}',
+              style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey700),
+            ),
+
+            pw.SizedBox(height: 4),
+
+            pw.Text(
               'Grupo: $_grupoSeleccionado',
               style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey700),
             ),
@@ -807,7 +825,7 @@ class _GenerarReportesState extends State<GenerarReportes> {
           const SizedBox(height: 14),
 
           const Text(
-            'Grupo',
+            'Nivel',
             style: TextStyle(
               color: Color(0xFF858585),
               fontSize: 18,
@@ -818,8 +836,12 @@ class _GenerarReportesState extends State<GenerarReportes> {
           const SizedBox(height: 8),
 
           DropdownButtonFormField<String>(
-            value: _grupoSeleccionado,
+            value: _nivelSeleccionado,
             isExpanded: true,
+            hint: const Text(
+              'Seleccionar nivel',
+              style: TextStyle(color: Color(0xFF858585), fontSize: 17),
+            ),
             decoration: InputDecoration(
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 20,
@@ -840,19 +862,95 @@ class _GenerarReportesState extends State<GenerarReportes> {
                 ),
               ),
             ),
-            items: _grupos.map((grupo) {
-              return DropdownMenuItem<String>(
-                value: grupo,
+            items: const [
+              DropdownMenuItem<String>(
+                value: 'PRIMARIA',
                 child: Text(
-                  grupo,
-                  style: const TextStyle(
-                    color: Color(0xFF858585),
-                    fontSize: 17,
-                  ),
+                  'Primaria',
+                  style: TextStyle(color: Color(0xFF858585), fontSize: 17),
                 ),
-              );
-            }).toList(),
-            onChanged: _cargandoGrupos
+              ),
+              DropdownMenuItem<String>(
+                value: 'SECUNDARIA',
+                child: Text(
+                  'Secundaria',
+                  style: TextStyle(color: Color(0xFF858585), fontSize: 17),
+                ),
+              ),
+            ],
+            onChanged: (nivel) {
+              if (nivel == null) return;
+
+              setState(() {
+                _nivelSeleccionado = nivel;
+                _grupoSeleccionado = 'Todos los grupos';
+              });
+
+              _limpiarResultados();
+            },
+          ),
+
+          const SizedBox(height: 14),
+
+          const Text(
+            'Grupo',
+            style: TextStyle(
+              color: Color(0xFF858585),
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          DropdownButtonFormField<String>(
+            value: _nivelSeleccionado == null ? null : _grupoSeleccionado,
+            isExpanded: true,
+            hint: Text(
+              _nivelSeleccionado == null
+                  ? 'Selecciona primero un nivel'
+                  : 'Todos los grupos',
+              style: const TextStyle(color: Color(0xFF858585), fontSize: 17),
+            ),
+            decoration: InputDecoration(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 15,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(22),
+                borderSide: const BorderSide(
+                  color: Color(0xFFFFC400),
+                  width: 1.5,
+                ),
+              ),
+              disabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(22),
+                borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(22),
+                borderSide: const BorderSide(
+                  color: Color(0xFFFFC400),
+                  width: 2,
+                ),
+              ),
+            ),
+            items: _nivelSeleccionado == null
+                ? null
+                : ['Todos los grupos', ...gruposDelNivel].map((grupo) {
+                    return DropdownMenuItem<String>(
+                      value: grupo,
+                      child: Text(
+                        grupo,
+                        style: const TextStyle(
+                          color: Color(0xFF858585),
+                          fontSize: 17,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+            onChanged: _nivelSeleccionado == null
                 ? null
                 : (grupo) {
                     if (grupo == null) return;
@@ -977,7 +1075,9 @@ class _GenerarReportesState extends State<GenerarReportes> {
           const SizedBox(height: 5),
 
           Text(
-            'Grupo: $_grupoSeleccionado · Fecha: $_textoFiltroFecha',
+            'Nivel: ${_nivelSeleccionado ?? 'Todos'} · '
+            'Grupo: $_grupoSeleccionado · '
+            'Fecha: $_textoFiltroFecha',
             style: const TextStyle(fontSize: 12, color: Colors.grey),
           ),
 
