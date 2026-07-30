@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sapi/services/grupos_service.dart';
@@ -146,6 +148,10 @@ class _AlumnosCard extends StatelessWidget {
                 return const Center(child: CircularProgressIndicator());
               }
 
+              if (snapshot.hasError) {
+                return const Text('Ocurrió un error al cargar los alumnos');
+              }
+
               if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                 return const Text('No hay alumnos en este grupo');
               }
@@ -160,7 +166,11 @@ class _AlumnosCard extends StatelessWidget {
                   final apellidos = data['apellidos'] ?? '';
                   final edad = data['edad']?.toString() ?? '-';
 
-                  return _AlumnoItem(nombre: '$nombre $apellidos', edad: edad);
+                  return _AlumnoItem(
+                    idAlumno: doc.id,
+                    nombre: '$nombre $apellidos'.trim(),
+                    edad: edad,
+                  );
                 }).toList(),
               );
             },
@@ -171,49 +181,161 @@ class _AlumnosCard extends StatelessWidget {
   }
 }
 
-class _AlumnoItem extends StatelessWidget {
+class _AlumnoItem extends StatefulWidget {
+  final String idAlumno;
   final String nombre;
   final String edad;
 
-  const _AlumnoItem({required this.nombre, required this.edad});
+  const _AlumnoItem({
+    required this.idAlumno,
+    required this.nombre,
+    required this.edad,
+  });
+
+  @override
+  State<_AlumnoItem> createState() => _AlumnoItemState();
+}
+
+class _AlumnoItemState extends State<_AlumnoItem> {
+  Timer? _temporizadorPresionado;
+  bool _dialogoAbierto = false;
+
+  void _iniciarPresionado() {
+    _cancelarPresionado();
+
+    _temporizadorPresionado = Timer(const Duration(seconds: 2), () {
+      if (mounted && !_dialogoAbierto) {
+        _mostrarConfirmacionEliminar();
+      }
+    });
+  }
+
+  void _cancelarPresionado() {
+    _temporizadorPresionado?.cancel();
+    _temporizadorPresionado = null;
+  }
+
+  Future<void> _mostrarConfirmacionEliminar() async {
+    _dialogoAbierto = true;
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Eliminar alumno'),
+          content: Text('¿Deseas eliminar a ${widget.nombre}?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, false);
+              },
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, true);
+              },
+              child: const Text(
+                'Eliminar',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    _dialogoAbierto = false;
+
+    if (confirmar == true) {
+      await _eliminarAlumno();
+    }
+  }
+
+  Future<void> _eliminarAlumno() async {
+    try {
+      await GruposService().eliminarAlumno(widget.idAlumno);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${widget.nombre} fue eliminado correctamente')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudo eliminar al alumno'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _cancelarPresionado();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final iniciales = nombre
+    final iniciales = widget.nombre
         .trim()
         .split(' ')
-        .where((p) => p.isNotEmpty)
+        .where((parte) => parte.isNotEmpty)
         .take(2)
-        .map((p) => p[0])
+        .map((parte) => parte[0])
         .join()
         .toUpperCase();
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: GruposStyles.primaryYellow,
-            child: Text(
-              iniciales,
-              style: const TextStyle(
-                fontWeight: FontWeight.w900,
-                color: Colors.white,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+
+      // Comienza a contar los dos segundos.
+      onTapDown: (_) {
+        _iniciarPresionado();
+      },
+
+      // Si levanta el dedo antes, se cancela.
+      onTapUp: (_) {
+        _cancelarPresionado();
+      },
+
+      // También se cancela si mueve el dedo o hace scroll.
+      onTapCancel: () {
+        _cancelarPresionado();
+      },
+
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: GruposStyles.primaryYellow,
+              child: Text(
+                iniciales,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                ),
               ),
             ),
-          ),
 
-          const SizedBox(width: 12),
+            const SizedBox(width: 12),
 
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(nombre, style: GruposStyles.studentName),
-              Text('$edad años', style: GruposStyles.studentAge),
-            ],
-          ),
-        ],
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(widget.nombre, style: GruposStyles.studentName),
+                Text('${widget.edad} años', style: GruposStyles.studentAge),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

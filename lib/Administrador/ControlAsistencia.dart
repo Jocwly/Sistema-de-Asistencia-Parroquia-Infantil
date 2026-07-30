@@ -19,7 +19,36 @@ class _ControlAsistenciaState extends State<ControlAsistencia> {
   final GruposService _gruposService = GruposService();
 
   DateTime? _fechaSeleccionada;
+
+  String? _nivelSeleccionado;
   String _grupoSeleccionado = 'Todos los grupos';
+
+  final List<String> gruposPrimaria = const [
+    '2A',
+    '2B',
+    '3A',
+    '3B',
+    '4A',
+    '4B',
+    '5A',
+    '5B',
+    '6A',
+    '6B',
+  ];
+
+  final List<String> gruposSecundaria = const ['1A', '1B'];
+
+  List<String> get gruposDelNivel {
+    if (_nivelSeleccionado == 'PRIMARIA') {
+      return gruposPrimaria;
+    }
+
+    if (_nivelSeleccionado == 'SECUNDARIA') {
+      return gruposSecundaria;
+    }
+
+    return [];
+  }
 
   bool _esLaMismaFecha(DateTime fecha1, DateTime fecha2) {
     return DateUtils.isSameDay(fecha1, fecha2);
@@ -126,6 +155,10 @@ class _ControlAsistenciaState extends State<ControlAsistencia> {
         ? usuarioActual!['grupo'].toString().trim()
         : data['grupo']?.toString().trim() ?? 'Sin grupo';
 
+    final nivel = usuarioActual?['nivel']?.toString().trim().isNotEmpty == true
+        ? usuarioActual!['nivel'].toString().trim().toUpperCase()
+        : data['nivel']?.toString().trim().toUpperCase() ?? '';
+
     final edad =
         int.tryParse(
           usuarioActual?['edad']?.toString() ?? data['edad']?.toString() ?? '0',
@@ -145,6 +178,7 @@ class _ControlAsistenciaState extends State<ControlAsistencia> {
       'nombre': nombreCompleto.isNotEmpty
           ? nombreCompleto
           : 'Alumno sin nombre',
+      'nivel': nivel,
       'grupo': grupo,
       'edad': edad,
       'correoAlumno': correo,
@@ -170,22 +204,28 @@ class _ControlAsistenciaState extends State<ControlAsistencia> {
 
   List<Map<String, dynamic>> _filtrarAlumnos(
     List<Map<String, dynamic>> alumnos,
+    String? nivelSeleccionado,
     String grupoSeleccionado,
   ) {
     final textoBuscado = _buscarController.text.toLowerCase().trim();
 
     return alumnos.where((alumno) {
       final nombre = alumno['nombre'].toString().toLowerCase();
+      final nivelAlumno = alumno['nivel'].toString().trim().toUpperCase();
       final grupoAlumno = alumno['grupo'].toString().trim();
       final fechaAlumno = alumno['fechaDateTime'] as DateTime?;
 
       final coincideNombre = nombre.contains(textoBuscado);
 
+      final coincideNivel =
+          nivelSeleccionado == null ||
+          nivelAlumno == nivelSeleccionado.toUpperCase();
+
       final coincideGrupo =
           grupoSeleccionado == 'Todos los grupos' ||
           grupoAlumno.toLowerCase() == grupoSeleccionado.toLowerCase();
 
-      final coincideFecha;
+      final bool coincideFecha;
 
       if (_fechaSeleccionada == null) {
         coincideFecha = true;
@@ -195,7 +235,7 @@ class _ControlAsistenciaState extends State<ControlAsistencia> {
         coincideFecha = _esLaMismaFecha(fechaAlumno, _fechaSeleccionada!);
       }
 
-      return coincideNombre && coincideGrupo && coincideFecha;
+      return coincideNombre && coincideNivel && coincideGrupo && coincideFecha;
     }).toList();
   }
 
@@ -328,14 +368,22 @@ class _ControlAsistenciaState extends State<ControlAsistencia> {
               onLimpiar: _limpiarBusqueda,
             ),
           ),
+
           const SizedBox(height: 10),
+
           Row(
             children: [
               Expanded(child: _construirFiltroFecha()),
+
               const SizedBox(width: 8),
-              Expanded(child: _construirFiltroGrupo()),
+
+              Expanded(child: _construirFiltroNivel()),
             ],
           ),
+
+          const SizedBox(height: 10),
+
+          _construirFiltroGrupo(),
         ],
       ),
     );
@@ -377,77 +425,95 @@ class _ControlAsistenciaState extends State<ControlAsistencia> {
     );
   }
 
-  Widget _construirFiltroGrupo() {
+  Widget _construirFiltroNivel() {
     return Container(
       height: ControlAsistenciaStyles.alturaFiltro,
       padding: ControlAsistenciaStyles.campoHorizontalPadding,
       decoration: ControlAsistenciaStyles.filtroDecoration,
-      child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: _gruposService.obtenerGruposRegistrados(),
-        builder: (context, snapshotGrupos) {
-          if (snapshotGrupos.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: ControlAsistenciaStyles.amarillo,
-                ),
-              ),
-            );
-          }
-
-          final gruposFirestore =
-              snapshotGrupos.data?.docs
-                  .map(
-                    (documento) =>
-                        documento.data()['grupo']?.toString().trim() ?? '',
-                  )
-                  .where((grupo) => grupo.isNotEmpty)
-                  .toSet()
-                  .toList() ??
-              [];
-
-          gruposFirestore.sort((grupo1, grupo2) => grupo1.compareTo(grupo2));
-
-          final opciones = ['Todos los grupos', ...gruposFirestore];
-
-          final valorActual = opciones.contains(_grupoSeleccionado)
-              ? _grupoSeleccionado
-              : 'Todos los grupos';
-
-          return DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: valorActual,
-              isExpanded: true,
-              icon: const Icon(
-                Icons.keyboard_arrow_down,
-                color: ControlAsistenciaStyles.negroSuave,
-              ),
-              style: ControlAsistenciaStyles.textoDropdown,
-              items: opciones.map((grupo) {
-                return DropdownMenuItem<String>(
-                  value: grupo,
-                  child: Text(
-                    grupo,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                );
-              }).toList(),
-              onChanged: (valor) {
-                if (valor == null) {
-                  return;
-                }
-
-                setState(() {
-                  _grupoSeleccionado = valor;
-                });
-              },
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _nivelSeleccionado,
+          hint: Text('Nivel', style: ControlAsistenciaStyles.textoDropdown),
+          isExpanded: true,
+          icon: const Icon(
+            Icons.keyboard_arrow_down,
+            color: ControlAsistenciaStyles.negroSuave,
+          ),
+          style: ControlAsistenciaStyles.textoDropdown,
+          items: const [
+            DropdownMenuItem<String>(
+              value: 'PRIMARIA',
+              child: Text('Primaria'),
             ),
-          );
-        },
+            DropdownMenuItem<String>(
+              value: 'SECUNDARIA',
+              child: Text('Secundaria'),
+            ),
+          ],
+          onChanged: (valor) {
+            setState(() {
+              _nivelSeleccionado = valor;
+
+              // Cuando cambia el nivel, reinicia el grupo.
+              _grupoSeleccionado = 'Todos los grupos';
+            });
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _construirFiltroGrupo() {
+    final nivelElegido = _nivelSeleccionado != null;
+
+    final opciones = ['Todos los grupos', ...gruposDelNivel];
+
+    return Container(
+      width: double.infinity,
+      height: ControlAsistenciaStyles.alturaFiltro,
+      padding: ControlAsistenciaStyles.campoHorizontalPadding,
+      decoration: ControlAsistenciaStyles.filtroDecoration,
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: nivelElegido ? _grupoSeleccionado : null,
+          hint: Text(
+            nivelElegido ? 'Todos los grupos' : 'Selecciona primero un nivel',
+            style: ControlAsistenciaStyles.textoDropdown.copyWith(
+              color: ControlAsistenciaStyles.negroClaro,
+            ),
+          ),
+          isExpanded: true,
+          icon: Icon(
+            Icons.keyboard_arrow_down,
+            color: nivelElegido
+                ? ControlAsistenciaStyles.negroSuave
+                : ControlAsistenciaStyles.negroClaro,
+          ),
+          style: ControlAsistenciaStyles.textoDropdown,
+          items: nivelElegido
+              ? opciones.map((grupo) {
+                  return DropdownMenuItem<String>(
+                    value: grupo,
+                    child: Text(
+                      grupo,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                }).toList()
+              : null,
+          onChanged: nivelElegido
+              ? (valor) {
+                  if (valor == null) {
+                    return;
+                  }
+
+                  setState(() {
+                    _grupoSeleccionado = valor;
+                  });
+                }
+              : null,
+        ),
       ),
     );
   }
@@ -525,6 +591,7 @@ class _ControlAsistenciaState extends State<ControlAsistencia> {
 
             final alumnosFiltrados = _filtrarAlumnos(
               alumnos,
+              _nivelSeleccionado,
               _grupoSeleccionado,
             );
 

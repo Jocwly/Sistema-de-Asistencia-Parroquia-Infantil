@@ -25,6 +25,13 @@ class GruposService {
     });
   }
 
+  Future<void> eliminarAlumno(String idAlumno) async {
+    await FirebaseFirestore.instance
+        .collection('usuarios')
+        .doc(idAlumno)
+        .delete();
+  }
+
   Stream<QuerySnapshot<Map<String, dynamic>>> obtenerAlumnosPorGrupo(
     String grupo,
   ) {
