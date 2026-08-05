@@ -628,20 +628,6 @@ class _AsistenciaRecienteConUsuario extends StatelessWidget {
     required this.estado,
   });
 
-  String _nombreDesdeAsistencia() {
-    final nombre = datosAsistencia['nombreAlumno']?.toString().trim() ?? '';
-    final apellidos =
-        datosAsistencia['apellidosAlumno']?.toString().trim() ?? '';
-    final nombreCompleto = '$nombre $apellidos'.trim();
-
-    return nombreCompleto.isEmpty ? 'Alumno sin nombre' : nombreCompleto;
-  }
-
-  String _grupoDesdeAsistencia() {
-    final grupo = datosAsistencia['grupo']?.toString().trim() ?? '';
-    return grupo.isEmpty ? 'Sin grupo' : grupo;
-  }
-
   String _obtenerIniciales(String nombre) {
     final partes = nombre
         .trim()
@@ -650,7 +636,10 @@ class _AsistenciaRecienteConUsuario extends StatelessWidget {
         .toList();
 
     if (partes.isEmpty) return '?';
-    if (partes.length == 1) return partes.first[0].toUpperCase();
+
+    if (partes.length == 1) {
+      return partes.first[0].toUpperCase();
+    }
 
     return '${partes[0][0]}${partes[1][0]}'.toUpperCase();
   }
@@ -659,16 +648,10 @@ class _AsistenciaRecienteConUsuario extends StatelessWidget {
   Widget build(BuildContext context) {
     final uidAlumno = datosAsistencia['uidAlumno']?.toString().trim() ?? '';
 
+    // Si la asistencia no tiene alumno asociado,
+    // ya no se muestra
     if (uidAlumno.isEmpty) {
-      final nombre = _nombreDesdeAsistencia();
-
-      return _AsistenciaRecienteItem(
-        iniciales: _obtenerIniciales(nombre),
-        nombre: nombre,
-        fecha: fecha,
-        grupo: _grupoDesdeAsistencia(),
-        estado: estado,
-      );
+      return const SizedBox();
     }
 
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
@@ -677,27 +660,32 @@ class _AsistenciaRecienteConUsuario extends StatelessWidget {
           .doc(uidAlumno)
           .snapshots(),
       builder: (context, snapshot) {
+        // Mientras busca el usuario no muestra datos viejos
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox();
+        }
+
         final usuario = snapshot.data?.data();
 
-        final nombreUsuario = usuario?['nombre']?.toString().trim() ?? '';
-        final apellidosUsuario = usuario?['apellidos']?.toString().trim() ?? '';
-        final nombreActual = '$nombreUsuario $apellidosUsuario'.trim();
+        // Si el alumno ya no existe en usuarios,
+        // elimina visualmente la asistencia
+        if (usuario == null) {
+          return const SizedBox();
+        }
 
-        final grupoActual = usuario?['grupo']?.toString().trim() ?? '';
+        final nombreUsuario = usuario['nombre']?.toString().trim() ?? '';
 
-        final nombre = nombreActual.isNotEmpty
-            ? nombreActual
-            : _nombreDesdeAsistencia();
+        final apellidosUsuario = usuario['apellidos']?.toString().trim() ?? '';
 
-        final grupo = grupoActual.isNotEmpty
-            ? grupoActual
-            : _grupoDesdeAsistencia();
+        final nombre = '$nombreUsuario $apellidosUsuario'.trim();
+
+        final grupo = usuario['grupo']?.toString().trim() ?? '';
 
         return _AsistenciaRecienteItem(
           iniciales: _obtenerIniciales(nombre),
-          nombre: nombre,
+          nombre: nombre.isEmpty ? 'Alumno sin nombre' : nombre,
           fecha: fecha,
-          grupo: grupo,
+          grupo: grupo.isEmpty ? 'Sin grupo' : grupo,
           estado: estado,
         );
       },

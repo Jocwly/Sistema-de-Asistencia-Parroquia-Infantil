@@ -20,6 +20,7 @@ class _RegistroState extends State<Registro> {
   final _apellidosController = TextEditingController();
   final _edadController = TextEditingController();
   final _correoController = TextEditingController();
+  final _telefonoController = TextEditingController();
   final _passwordController = TextEditingController();
 
   String? _nivelSeleccionado;
@@ -49,7 +50,9 @@ class _RegistroState extends State<Registro> {
     _apellidosController.dispose();
     _edadController.dispose();
     _correoController.dispose();
+    _telefonoController.dispose();
     _passwordController.dispose();
+
     super.dispose();
   }
 
@@ -65,6 +68,22 @@ class _RegistroState extends State<Registro> {
           backgroundColor: Colors.red,
         ),
       );
+
+      return;
+    }
+
+    final correo = _correoController.text.trim();
+
+    final telefono = _telefonoController.text.trim();
+
+    if (correo.isEmpty && telefono.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ingresa un correo o teléfono'),
+          backgroundColor: Colors.red,
+        ),
+      );
+
       return;
     }
 
@@ -73,9 +92,21 @@ class _RegistroState extends State<Registro> {
     });
 
     try {
+      String correoAuth;
+
+      // Si tiene correo usa su correo real
+      if (correo.isNotEmpty) {
+        correoAuth = correo;
+      }
+      // Si solo tiene teléfono crea correo interno
+      else {
+        correoAuth = '$telefono@sapi.com';
+      }
+
       final credential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(
-            email: _correoController.text.trim(),
+            email: correoAuth,
+
             password: _passwordController.text.trim(),
           );
 
@@ -84,16 +115,27 @@ class _RegistroState extends State<Registro> {
           .doc(credential.user!.uid)
           .set({
             'uid': credential.user!.uid,
+
             'nombre': _nombreController.text.trim(),
+
             'apellidos': _apellidosController.text.trim(),
+
             'edad': int.parse(_edadController.text.trim()),
 
-            // Datos utilizados por Gestión de Grupos
             'nivel': _nivelSeleccionado,
+
             'grupo': _grupoSeleccionado,
 
-            'correo': _correoController.text.trim(),
+            // Datos visibles
+            'correo': correo,
+
+            'telefono': telefono,
+
+            // Dato interno de Firebase Auth
+            'correoAuth': correoAuth,
+
             'rol': 'alumno',
+
             'fechaRegistro': FieldValue.serverTimestamp(),
           });
 
@@ -103,8 +145,10 @@ class _RegistroState extends State<Registro> {
         SnackBar(
           content: Text(
             'Alumno registrado en '
-            '$_nivelSeleccionado - Grupo $_grupoSeleccionado',
+            '$_nivelSeleccionado - '
+            'Grupo $_grupoSeleccionado',
           ),
+
           backgroundColor: Colors.green,
         ),
       );
@@ -114,7 +158,7 @@ class _RegistroState extends State<Registro> {
       String mensaje = 'Error al registrar usuario';
 
       if (e.code == 'email-already-in-use') {
-        mensaje = 'Este correo ya está registrado';
+        mensaje = 'El correo o teléfono ya está registrado';
       } else if (e.code == 'invalid-email') {
         mensaje = 'Correo inválido';
       } else if (e.code == 'weak-password') {
@@ -126,6 +170,7 @@ class _RegistroState extends State<Registro> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(mensaje),
+
           backgroundColor: LoginStyles.errorColor,
         ),
       );
@@ -135,6 +180,7 @@ class _RegistroState extends State<Registro> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error al registrar: $e'),
+
           backgroundColor: LoginStyles.errorColor,
         ),
       );
@@ -153,53 +199,34 @@ class _RegistroState extends State<Registro> {
     return regex.hasMatch(correo);
   }
 
+  bool _telefonoValido(String telefono) {
+    final regex = RegExp(r'^[0-9]{10}$');
+
+    return regex.hasMatch(telefono);
+  }
+
   bool _nombreValido(String nombre) {
     final regex = RegExp(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$');
 
     return regex.hasMatch(nombre);
   }
 
-  List<String> _filtrarGruposExistentes(
-    List<QueryDocumentSnapshot<Map<String, dynamic>>> documentos,
-  ) {
-    if (_nivelSeleccionado == null) {
-      return [];
-    }
-
-    final gruposPermitidos = _nivelSeleccionado == 'PRIMARIA'
-        ? _gruposPrimaria
-        : _gruposSecundaria;
-
-    final gruposExistentes = documentos
-        .map((documento) {
-          final data = documento.data();
-
-          return (data['grupo'] ?? '').toString().trim().toUpperCase();
-        })
-        .where((grupo) {
-          return grupo.isNotEmpty && gruposPermitidos.contains(grupo);
-        })
-        .toSet()
-        .toList();
-
-    gruposExistentes.sort();
-
-    return gruposExistentes;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 255, 255, 255),
-      //appBar: AppBar(title: const Text('Registro'), centerTitle: true),
+
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: LoginStyles.pagePadding,
+
             child: Form(
               key: _formKey,
+
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
+
                 children: [
                   LoginStyles.logoIcon(),
 
@@ -207,7 +234,9 @@ class _RegistroState extends State<Registro> {
 
                   Text(
                     'Registro de Alumno',
+
                     textAlign: TextAlign.center,
+
                     style: LoginStyles.titleStyle(context),
                   ),
 
@@ -216,18 +245,23 @@ class _RegistroState extends State<Registro> {
                   // NOMBRE
                   TextFormField(
                     controller: _nombreController,
+
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(
                         RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]'),
                       ),
                     ],
+
                     textCapitalization: TextCapitalization.words,
-                    textInputAction: TextInputAction.next,
+
                     decoration: const InputDecoration(
                       labelText: 'Nombre',
+
                       prefixIcon: Icon(Icons.person),
+
                       border: LoginStyles.inputBorder,
                     ),
+
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
                         return 'Ingresa tu nombre';
@@ -243,20 +277,26 @@ class _RegistroState extends State<Registro> {
 
                   const SizedBox(height: LoginStyles.fieldSpacing),
 
+                  // APELLIDOS
                   TextFormField(
                     controller: _apellidosController,
+
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(
                         RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]'),
                       ),
                     ],
+
                     textCapitalization: TextCapitalization.words,
-                    textInputAction: TextInputAction.next,
+
                     decoration: const InputDecoration(
                       labelText: 'Apellidos',
+
                       prefixIcon: Icon(Icons.badge_outlined),
+
                       border: LoginStyles.inputBorder,
                     ),
+
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
                         return 'Ingresa tus apellidos';
@@ -273,22 +313,29 @@ class _RegistroState extends State<Registro> {
                       return null;
                     },
                   ),
+
                   const SizedBox(height: LoginStyles.fieldSpacing),
 
                   // EDAD
                   TextFormField(
                     controller: _edadController,
+
                     keyboardType: TextInputType.number,
-                    textInputAction: TextInputAction.next,
+
                     inputFormatters: [
                       FilteringTextInputFormatter.digitsOnly,
+
                       LengthLimitingTextInputFormatter(2),
                     ],
+
                     decoration: const InputDecoration(
                       labelText: 'Edad',
+
                       prefixIcon: Icon(Icons.cake),
+
                       border: LoginStyles.inputBorder,
                     ),
+
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
                         return 'Ingresa tu edad';
@@ -317,29 +364,37 @@ class _RegistroState extends State<Registro> {
                   // NIVEL
                   DropdownButtonFormField<String>(
                     value: _nivelSeleccionado,
+
                     decoration: const InputDecoration(
                       labelText: 'Nivel',
+
                       prefixIcon: Icon(Icons.school_rounded),
+
                       border: LoginStyles.inputBorder,
                     ),
+
                     items: const [
                       DropdownMenuItem(
                         value: 'PRIMARIA',
+
                         child: Text('PRIMARIA'),
                       ),
+
                       DropdownMenuItem(
                         value: 'SECUNDARIA',
+
                         child: Text('SECUNDARIA'),
                       ),
                     ],
+
                     onChanged: (value) {
                       setState(() {
                         _nivelSeleccionado = value;
 
-                        // Reinicia el grupo cuando cambia el nivel
                         _grupoSeleccionado = null;
                       });
                     },
+
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Selecciona un nivel';
@@ -351,7 +406,6 @@ class _RegistroState extends State<Registro> {
 
                   const SizedBox(height: LoginStyles.fieldSpacing),
 
-                  // GRUPO
                   _construirSelectorGrupo(),
 
                   const SizedBox(height: LoginStyles.fieldSpacing),
@@ -359,19 +413,27 @@ class _RegistroState extends State<Registro> {
                   // CORREO
                   TextFormField(
                     controller: _correoController,
+
                     keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.next,
+
                     decoration: const InputDecoration(
-                      labelText: 'Correo electrónico',
+                      labelText: 'Correo electrónico (opcional)',
+
                       prefixIcon: Icon(Icons.email_outlined),
+
                       border: LoginStyles.inputBorder,
                     ),
+
                     validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Ingresa un correo';
+                      final correo = value?.trim() ?? '';
+
+                      final telefono = _telefonoController.text.trim();
+
+                      if (correo.isEmpty && telefono.isEmpty) {
+                        return 'Ingresa correo o teléfono';
                       }
 
-                      if (!_correoValido(value.trim())) {
+                      if (correo.isNotEmpty && !_correoValido(correo)) {
                         return 'Correo inválido';
                       }
 
@@ -381,21 +443,68 @@ class _RegistroState extends State<Registro> {
 
                   const SizedBox(height: LoginStyles.fieldSpacing),
 
+                  // TELEFONO NUEVO
+                  TextFormField(
+                    controller: _telefonoController,
+
+                    keyboardType: TextInputType.phone,
+
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+
+                      LengthLimitingTextInputFormatter(10),
+                    ],
+
+                    decoration: const InputDecoration(
+                      labelText: 'Teléfono (opcional)',
+
+                      hintText: '10 dígitos',
+
+                      prefixIcon: Icon(Icons.phone),
+
+                      border: LoginStyles.inputBorder,
+                    ),
+
+                    validator: (value) {
+                      final telefono = value?.trim() ?? '';
+
+                      final correo = _correoController.text.trim();
+
+                      if (telefono.isEmpty && correo.isEmpty) {
+                        return 'Ingresa correo o teléfono';
+                      }
+
+                      if (telefono.isNotEmpty && !_telefonoValido(telefono)) {
+                        return 'Teléfono inválido';
+                      }
+
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: LoginStyles.fieldSpacing),
+
                   // CONTRASEÑA
                   TextFormField(
                     controller: _passwordController,
+
                     obscureText: _obscurePassword,
+
                     textInputAction: TextInputAction.done,
+
                     decoration: InputDecoration(
                       labelText: 'Contraseña',
+
                       prefixIcon: const Icon(Icons.lock),
+
                       border: LoginStyles.inputBorder,
+
                       suffixIcon: IconButton(
                         icon: Icon(
                           _obscurePassword
                               ? Icons.visibility
                               : Icons.visibility_off,
                         ),
+
                         onPressed: () {
                           setState(() {
                             _obscurePassword = !_obscurePassword;
@@ -403,6 +512,7 @@ class _RegistroState extends State<Registro> {
                         },
                       ),
                     ),
+
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Ingresa una contraseña';
@@ -415,23 +525,28 @@ class _RegistroState extends State<Registro> {
                       return null;
                     },
                   ),
-
                   const SizedBox(height: 30),
 
                   FilledButton(
                     onPressed: _isLoading ? null : _registrar,
+
                     style: LoginStyles.loginButtonStyle(),
+
                     child: _isLoading
                         ? const SizedBox(
                             width: 22,
+
                             height: 22,
+
                             child: CircularProgressIndicator(
                               color: Colors.black,
+
                               strokeWidth: 2,
                             ),
                           )
                         : const Text(
                             'Registrarse',
+
                             style: LoginStyles.buttonText,
                           ),
                   ),

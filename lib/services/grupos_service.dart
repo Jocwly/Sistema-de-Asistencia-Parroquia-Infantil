@@ -25,10 +25,21 @@ class GruposService {
     });
   }
 
-  Future<void> eliminarAlumno(String idAlumno) async {
+  Future<void> eliminarAlumno(String uidAlumno) async {
+    // 1. Eliminar asistencias del alumno
+    final asistencias = await FirebaseFirestore.instance
+        .collection('asistencias')
+        .where('uidAlumno', isEqualTo: uidAlumno)
+        .get();
+
+    for (var doc in asistencias.docs) {
+      await doc.reference.delete();
+    }
+
+    // 2. Eliminar usuario
     await FirebaseFirestore.instance
         .collection('usuarios')
-        .doc(idAlumno)
+        .doc(uidAlumno)
         .delete();
   }
 

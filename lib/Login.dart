@@ -17,36 +17,81 @@ class Login extends StatefulWidget {
 
 class _LoginState extends State<Login> {
   final _formKey = GlobalKey<FormState>();
+
   final _userController = TextEditingController();
+
   final _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
+
   bool _isLoading = false;
 
   @override
   void dispose() {
     _userController.dispose();
+
     _passwordController.dispose();
+
     super.dispose();
   }
 
-  Future<void> _onLogin() async {
-    if (!_formKey.currentState!.validate()) return;
+  // OBTENER CORREO INTERNO CUANDO INGRESA TELÉFONO
 
-    setState(() => _isLoading = true);
+  Future<String?> _obtenerCorreoAuth(String dato) async {
+    // Si escribe correo usa ese directamente
+
+    if (dato.contains('@')) {
+      return dato;
+    }
+
+    // Si escribe teléfono buscamos en usuarios
+
+    final resultado = await FirebaseFirestore.instance
+        .collection('usuarios')
+        .where('telefono', isEqualTo: dato)
+        .limit(1)
+        .get();
+
+    if (resultado.docs.isEmpty) {
+      return null;
+    }
+
+    final usuario = resultado.docs.first.data();
+
+    return usuario['correoAuth'];
+  }
+
+  Future<void> _onLogin() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
 
     try {
+      final dato = _userController.text.trim();
+
+      final correoAuth = await _obtenerCorreoAuth(dato);
+
+      if (correoAuth == null) {
+        throw FirebaseAuthException(code: 'user-not-found');
+      }
+
       final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _userController.text.trim(),
+        email: correoAuth,
+
         password: _passwordController.text.trim(),
       );
 
       if (!mounted) return;
 
-      // Si es el administrador, entra directamente a su pantalla.
-      // La cuenta ya quedó autenticada en Firebase.
+      // ADMINISTRADOR
+
       if (credential.user?.email == 'admin@gmail.com') {
         Navigator.pushReplacementNamed(context, InicioAdmin.routeName);
+
         return;
       }
 
@@ -57,21 +102,22 @@ class _LoginState extends State<Login> {
           .doc(uid)
           .get();
 
-      if (!mounted) return;
-
       if (!userDoc.exists) {
         await FirebaseAuth.instance.signOut();
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('No se encontraron datos del usuario'),
+
             backgroundColor: LoginStyles.errorColor,
           ),
         );
+
         return;
       }
 
       final data = userDoc.data()!;
+
       final rol = data['rol'];
 
       if (rol == 'admin') {
@@ -84,6 +130,7 @@ class _LoginState extends State<Login> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Rol de usuario no válido'),
+
             backgroundColor: LoginStyles.errorColor,
           ),
         );
@@ -91,12 +138,12 @@ class _LoginState extends State<Login> {
     } on FirebaseAuthException catch (e) {
       String mensaje = 'Usuario o contraseña incorrectos';
 
-      if (e.code == 'invalid-email') {
-        mensaje = 'Correo inválido';
-      } else if (e.code == 'user-not-found' || e.code == 'invalid-credential') {
-        mensaje = 'Usuario o contraseña incorrectos';
-      } else if (e.code == 'wrong-password') {
+      if (e.code == 'user-not-found') {
+        mensaje = 'Usuario no encontrado';
+      } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
         mensaje = 'Contraseña incorrecta';
+      } else if (e.code == 'invalid-email') {
+        mensaje = 'Correo inválido';
       }
 
       if (!mounted) return;
@@ -104,6 +151,7 @@ class _LoginState extends State<Login> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(mensaje),
+
           backgroundColor: LoginStyles.errorColor,
         ),
       );
@@ -113,12 +161,15 @@ class _LoginState extends State<Login> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error: $e'),
+
           backgroundColor: LoginStyles.errorColor,
         ),
       );
     } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
@@ -127,14 +178,18 @@ class _LoginState extends State<Login> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: LoginStyles.pagePadding,
+
             child: Form(
               key: _formKey,
+
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
+
                 children: [
                   LoginStyles.logoIcon(),
 
@@ -142,18 +197,24 @@ class _LoginState extends State<Login> {
 
                   Text(
                     'Sistema de Asistencia Parroquia Infantil',
+
                     textAlign: TextAlign.center,
+
                     style: LoginStyles.titleStyle(context),
                   ),
 
                   const SizedBox(height: LoginStyles.titleSpacing),
 
-                  Text(
+                  const Text(
                     'Inicia Sesión',
+
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+
+                    style: TextStyle(
                       fontSize: 25,
+
                       fontWeight: FontWeight.bold,
+
                       color: Colors.black,
                     ),
                   ),
@@ -162,20 +223,32 @@ class _LoginState extends State<Login> {
 
                   TextFormField(
                     controller: _userController,
-                    keyboardType: TextInputType.emailAddress,
+
+                    keyboardType: TextInputType.text,
+
                     textInputAction: TextInputAction.next,
+
                     decoration: const InputDecoration(
-                      labelText: 'Correo electrónico',
-                      prefixIcon: Icon(Icons.email_outlined),
+                      labelText: 'Correo o teléfono',
+
+                      prefixIcon: Icon(Icons.person_outline),
+
                       border: LoginStyles.inputBorder,
                     ),
+
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Ingresa tu correo';
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Ingresa correo o teléfono';
                       }
-                      if (!value.contains('@')) {
-                        return 'Correo inválido';
+
+                      final dato = value.trim();
+
+                      if (!dato.contains('@')) {
+                        if (!RegExp(r'^[0-9]{10}$').hasMatch(dato)) {
+                          return 'Teléfono inválido';
+                        }
                       }
+
                       return null;
                     },
                   ),
@@ -184,31 +257,44 @@ class _LoginState extends State<Login> {
 
                   TextFormField(
                     controller: _passwordController,
+
                     obscureText: _obscurePassword,
+
                     textInputAction: TextInputAction.done,
+
                     onFieldSubmitted: (_) => _onLogin(),
+
                     decoration: InputDecoration(
                       labelText: 'Contraseña',
+
                       prefixIcon: const Icon(Icons.lock_outlined),
+
                       border: LoginStyles.inputBorder,
+
                       suffixIcon: IconButton(
                         icon: Icon(
                           _obscurePassword
                               ? Icons.visibility_outlined
                               : Icons.visibility_off_outlined,
                         ),
-                        onPressed: () => setState(
-                          () => _obscurePassword = !_obscurePassword,
-                        ),
+
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
                       ),
                     ),
+
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Ingresa tu contraseña';
                       }
-                      if (value.length < 6) {
-                        return 'Mínimo 6 caracteres';
+
+                      if (value.length < 8) {
+                        return 'Mínimo 8 caracteres';
                       }
+
                       return null;
                     },
                   ),
@@ -217,11 +303,14 @@ class _LoginState extends State<Login> {
 
                   FilledButton(
                     onPressed: _isLoading ? null : _onLogin,
+
                     style: LoginStyles.loginButtonStyle(),
+
                     child: _isLoading
                         ? const CircularProgressIndicator(color: Colors.black)
                         : const Text(
                             'Iniciar sesión',
+
                             style: LoginStyles.buttonText,
                           ),
                   ),
@@ -230,20 +319,26 @@ class _LoginState extends State<Login> {
 
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
+
                     children: [
                       const Text(
                         '¿No tienes una cuenta?',
                         style: TextStyle(fontSize: 15),
                       ),
+
                       TextButton(
                         onPressed: () {
                           Navigator.pushNamed(context, Registro.routeName);
                         },
+
                         child: const Text(
                           'Regístrate',
+
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
+
                             color: Colors.black,
+
                             decoration: TextDecoration.underline,
                           ),
                         ),
