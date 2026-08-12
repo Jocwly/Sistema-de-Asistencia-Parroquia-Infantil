@@ -85,10 +85,6 @@ class _InicioAlumnoState extends State<InicioAlumno> {
       final hoyEsDomingo = hoy.weekday == DateTime.sunday;
       final hayMisaEspecialHoy = misasEspecialesDeHoy.docs.isNotEmpty;
 
-      /*
-     * Puede ocurrir que hoy sea domingo y también exista
-     * una misa especial registrada por el administrador.
-     */
       if (hoyEsDomingo && hayMisaEspecialHoy) {
         final datos = misasEspecialesDeHoy.docs.first.data();
 
@@ -919,6 +915,7 @@ class _InicioAlumnoState extends State<InicioAlumno> {
       color: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             child: _BottomNavigationItem(

@@ -162,6 +162,34 @@ class _LoginState extends State<Login> {
                     textAlign: TextAlign.center,
                     style: LoginStyles.titleStyle(context),
                   ),
+
+                  const SizedBox(height: 12),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 45,
+                        height: 1.5,
+                        color: Color(0xFFFFC400),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        width: 5,
+                        height: 5,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFFC400),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        width: 45,
+                        height: 1.5,
+                        color: Color(0xFFFFC400),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: LoginStyles.titleSpacing),
                   const Text(
                     'Inicia Sesión',
