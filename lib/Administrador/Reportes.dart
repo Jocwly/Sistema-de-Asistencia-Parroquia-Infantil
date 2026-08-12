@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:sapi/styles/GenerarReportesStyles.dart';
 
 class GenerarReportes extends StatefulWidget {
   const GenerarReportes({super.key});
@@ -681,42 +682,45 @@ class _GenerarReportesState extends State<GenerarReportes> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F8F8),
+      backgroundColor: GenerarReportesStyles.backgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.white,
         elevation: 0,
+
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
           icon: const Icon(
             Icons.arrow_back_ios_new_rounded,
             color: Colors.black87,
+            size: 24,
           ),
         ),
+
         title: const Text(
           'Generar Reportes',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 27,
-            fontWeight: FontWeight.w800,
-          ),
+          style: GenerarReportesStyles.appBarTitle,
         ),
+
         centerTitle: true,
+
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1, thickness: 1, color: Color(0xFFFFC400)),
+          child: Divider(
+            height: 1,
+            thickness: 1,
+            color: GenerarReportesStyles.amarilloBorde,
+          ),
         ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(18, 28, 18, 24),
+          padding: GenerarReportesStyles.screenPadding,
           child: Column(
             children: [
               _buildConfiguracion(),
-
               if (_reporteGenerado) ...[
                 const SizedBox(height: 18),
-
                 Row(
                   children: [
                     Expanded(
@@ -808,73 +812,40 @@ class _GenerarReportesState extends State<GenerarReportes> {
   Widget _buildConfiguracion() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const Color(0xFFFFC400), width: 1.5),
-        borderRadius: BorderRadius.circular(24),
-      ),
+      padding: GenerarReportesStyles.configuracionPadding,
+      decoration: GenerarReportesStyles.configuracionDecoration,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
             'Configurar Reporte',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+            style: GenerarReportesStyles.sectionTitle,
           ),
 
           const SizedBox(height: 14),
 
-          const Text(
-            'Nivel',
-            style: TextStyle(
-              color: Color(0xFF858585),
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
+          const Text('Nivel', style: GenerarReportesStyles.fieldLabel),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
 
           DropdownButtonFormField<String>(
             value: _nivelSeleccionado,
             isExpanded: true,
             hint: const Text(
               'Seleccionar nivel',
-              style: TextStyle(color: Color(0xFF858585), fontSize: 17),
+              style: GenerarReportesStyles.fieldText,
             ),
-            decoration: InputDecoration(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 15,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(22),
-                borderSide: const BorderSide(
-                  color: Color(0xFFFFC400),
-                  width: 1.5,
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(22),
-                borderSide: const BorderSide(
-                  color: Color(0xFFFFC400),
-                  width: 2,
-                ),
-              ),
-            ),
+            decoration: GenerarReportesStyles.dropdownDecoration(),
             items: const [
               DropdownMenuItem<String>(
                 value: 'PRIMARIA',
-                child: Text(
-                  'Primaria',
-                  style: TextStyle(color: Color(0xFF858585), fontSize: 17),
-                ),
+                child: Text('Primaria', style: GenerarReportesStyles.fieldText),
               ),
               DropdownMenuItem<String>(
                 value: 'SECUNDARIA',
                 child: Text(
                   'Secundaria',
-                  style: TextStyle(color: Color(0xFF858585), fontSize: 17),
+                  style: GenerarReportesStyles.fieldText,
                 ),
               ),
             ],
@@ -892,14 +863,7 @@ class _GenerarReportesState extends State<GenerarReportes> {
 
           const SizedBox(height: 14),
 
-          const Text(
-            'Grupo',
-            style: TextStyle(
-              color: Color(0xFF858585),
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
+          const Text('Grupo', style: GenerarReportesStyles.fieldLabel),
 
           const SizedBox(height: 8),
 
@@ -912,30 +876,7 @@ class _GenerarReportesState extends State<GenerarReportes> {
                   : 'Todos los grupos',
               style: const TextStyle(color: Color(0xFF858585), fontSize: 17),
             ),
-            decoration: InputDecoration(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 15,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(22),
-                borderSide: const BorderSide(
-                  color: Color(0xFFFFC400),
-                  width: 1.5,
-                ),
-              ),
-              disabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(22),
-                borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(22),
-                borderSide: const BorderSide(
-                  color: Color(0xFFFFC400),
-                  width: 2,
-                ),
-              ),
-            ),
+            decoration: GenerarReportesStyles.dropdownDecoration(),
             items: _nivelSeleccionado == null
                 ? null
                 : ['Todos los grupos', ...gruposDelNivel].map((grupo) {
@@ -943,10 +884,7 @@ class _GenerarReportesState extends State<GenerarReportes> {
                       value: grupo,
                       child: Text(
                         grupo,
-                        style: const TextStyle(
-                          color: Color(0xFF858585),
-                          fontSize: 17,
-                        ),
+                        style: GenerarReportesStyles.fieldText,
                       ),
                     );
                   }).toList(),
@@ -965,27 +903,27 @@ class _GenerarReportesState extends State<GenerarReportes> {
 
           const SizedBox(height: 14),
 
-          const Text(
-            'Fecha',
-            style: TextStyle(
-              color: Color(0xFF858585),
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
+          const Text('Fecha', style: GenerarReportesStyles.fieldLabel),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
 
           InkWell(
             onTap: _seleccionarFecha,
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(
+              GenerarReportesStyles.radioCampo,
+            ),
             child: Container(
               width: double.infinity,
-              height: 60,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              height: GenerarReportesStyles.alturaCampo,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
               decoration: BoxDecoration(
-                border: Border.all(color: const Color(0xFFFFC400), width: 1.5),
-                borderRadius: BorderRadius.circular(22),
+                border: Border.all(
+                  color: GenerarReportesStyles.amarilloBorde,
+                  width: 1.2,
+                ),
+                borderRadius: BorderRadius.circular(
+                  GenerarReportesStyles.radioCampo,
+                ),
               ),
               child: Row(
                 children: [
@@ -994,22 +932,25 @@ class _GenerarReportesState extends State<GenerarReportes> {
                       _fechaSeleccionada == null
                           ? 'DD/MM/AAAA'
                           : _formatearFecha(_fechaSeleccionada!),
-                      style: const TextStyle(
-                        color: Color(0xFF858585),
-                        fontSize: 17,
-                      ),
+                      style: GenerarReportesStyles.fieldText,
                     ),
                   ),
+
                   if (_fechaSeleccionada != null)
                     IconButton(
                       tooltip: 'Quitar filtro de fecha',
                       onPressed: _quitarFiltroFecha,
-                      icon: const Icon(Icons.close_rounded, color: Colors.grey),
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        color: Colors.grey,
+                        size: 20,
+                      ),
                     )
                   else
                     const Icon(
                       Icons.calendar_month_rounded,
                       color: Colors.black87,
+                      size: 21,
                     ),
                 ],
               ),
@@ -1018,35 +959,26 @@ class _GenerarReportesState extends State<GenerarReportes> {
 
           const SizedBox(height: 20),
 
+          const SizedBox(height: 16),
+
           SizedBox(
             width: double.infinity,
-            height: 58,
+            height: GenerarReportesStyles.alturaBoton,
             child: ElevatedButton(
               onPressed: _generandoReporte ? null : _generarReporte,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFFC800),
-                disabledBackgroundColor: const Color(0xFFFFE582),
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(22),
-                ),
-              ),
+              style: GenerarReportesStyles.generarButtonStyle,
               child: _generandoReporte
                   ? const SizedBox(
-                      width: 23,
-                      height: 23,
+                      width: 20,
+                      height: 20,
                       child: CircularProgressIndicator(
-                        strokeWidth: 3,
+                        strokeWidth: 2.5,
                         color: Colors.black,
                       ),
                     )
                   : const Text(
                       'Generar Reporte',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                      ),
+                      style: GenerarReportesStyles.buttonText,
                     ),
             ),
           ),
@@ -1133,10 +1065,10 @@ class _ResumenCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 82,
+      height: 70,
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -1145,7 +1077,7 @@ class _ResumenCard extends StatelessWidget {
             cantidad.toString(),
             style: TextStyle(
               color: numberColor,
-              fontSize: 26,
+              fontSize: 22,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -1154,7 +1086,7 @@ class _ResumenCard extends StatelessWidget {
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: Colors.black,
-              fontSize: 13,
+              fontSize: 12,
               fontWeight: FontWeight.w800,
             ),
           ),

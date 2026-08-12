@@ -18,11 +18,6 @@ class MisasService {
   static final CollectionReference<Map<String, dynamic>> _misasRef =
       FirebaseFirestore.instance.collection('misas_especiales');
 
-  /// Verifica si en la fecha indicada existe una misa programada.
-  ///
-  /// Una misa puede ser:
-  /// - Dominical: cualquier domingo.
-  /// - Especial: registrada por el administrador en Firestore.
   static Future<MisaProgramada> obtenerMisaProgramada(DateTime fecha) async {
     final dia = DateTime(fecha.year, fecha.month, fecha.day);
 

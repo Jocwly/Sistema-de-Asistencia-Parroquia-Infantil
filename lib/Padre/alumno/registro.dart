@@ -215,37 +215,31 @@ class _RegistroState extends State<Registro> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 255, 255, 255),
-
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: LoginStyles.pagePadding,
-
             child: Form(
               key: _formKey,
-
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-
                 children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_new, size: 26),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  const SizedBox(width: 48),
                   LoginStyles.logoIcon(),
-
                   const SizedBox(height: LoginStyles.titleSpacing),
-
                   Text(
                     'Registro de Alumno',
-
                     textAlign: TextAlign.center,
-
                     style: LoginStyles.titleStyle(context),
                   ),
-
                   const SizedBox(height: LoginStyles.sectionSpacing),
-
                   // NOMBRE
                   TextFormField(
                     controller: _nombreController,
-
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(
                         RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]'),
@@ -256,9 +250,7 @@ class _RegistroState extends State<Registro> {
 
                     decoration: const InputDecoration(
                       labelText: 'Nombre',
-
                       prefixIcon: Icon(Icons.person),
-
                       border: LoginStyles.inputBorder,
                     ),
 
@@ -270,7 +262,6 @@ class _RegistroState extends State<Registro> {
                       if (!_nombreValido(value.trim())) {
                         return 'El nombre no debe contener números';
                       }
-
                       return null;
                     },
                   ),

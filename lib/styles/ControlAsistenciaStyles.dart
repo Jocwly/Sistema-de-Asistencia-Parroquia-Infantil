@@ -72,7 +72,7 @@ class ControlAsistenciaStyles {
   static const TextStyle tituloAppBar = TextStyle(
     color: negro,
     fontWeight: FontWeight.w800,
-    fontSize: 22,
+    fontSize: 26,
   );
 
   static const TextStyle textoBuscador = TextStyle(
@@ -92,7 +92,7 @@ class ControlAsistenciaStyles {
   static const TextStyle textoSinResultados = TextStyle(color: gris);
 
   static const TextStyle textoContadorRegistros = TextStyle(
-    color: textoContador,
+    color: Color.fromARGB(255, 0, 0, 0),
     fontSize: 12,
     fontWeight: FontWeight.w600,
   );
@@ -113,7 +113,7 @@ class ControlAsistenciaStyles {
   );
 
   static const TextStyle inicialesAlumno = TextStyle(
-    color: blanco,
+    color: Color.fromARGB(255, 6, 6, 6),
     fontSize: 12,
     fontWeight: FontWeight.bold,
   );
@@ -123,8 +123,10 @@ class ControlAsistenciaStyles {
     fontWeight: FontWeight.w700,
   );
 
-  static const TextStyle textoEtapa = TextStyle(fontSize: 9);
-
+  static const TextStyle textoEtapa = TextStyle(
+    color: Colors.black,
+    fontSize: 9,
+  );
 
   static InputDecoration buscadorDecoration({
     required bool mostrarBotonLimpiar,
@@ -187,7 +189,6 @@ class ControlAsistenciaStyles {
   static Color colorTextoFechaFiltro(bool tieneFecha) {
     return tieneFecha ? negroSuave : Colors.grey.shade600;
   }
-
   static Color colorEtapa(bool activo) {
     return activo ? blanco : etapaInactiva;
   }

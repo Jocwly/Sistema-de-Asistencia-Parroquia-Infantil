@@ -53,7 +53,6 @@ class _GestionGruposState extends State<GestionGrupos> {
         child: Column(
           children: [
             const _Header(),
-
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
               child: DropdownButtonFormField<String>(
@@ -137,7 +136,6 @@ class _GestionGruposState extends State<GestionGrupos> {
           separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
             final grupo = gruposDelNivel[index];
-
             for (final documento in documentos) {
               final data = documento.data();
               final grupoFirebase = (data['grupo'] ?? '')
@@ -145,10 +143,8 @@ class _GestionGruposState extends State<GestionGrupos> {
                   .trim()
                   .toUpperCase();
             }
-
             return _GrupoCard(
               grupo: grupo,
-
               onTap: () {
                 Navigator.push(
                   context,
@@ -211,11 +207,9 @@ class _Header extends StatelessWidget {
             icon: const Icon(Icons.arrow_back_ios_new, size: 26),
             onPressed: () => Navigator.pop(context),
           ),
-
           Expanded(
             child: Center(child: Text('Grupos', style: GruposStyles.title)),
           ),
-
           // Este espacio mantiene el título centrado.
           const SizedBox(width: 48),
         ],

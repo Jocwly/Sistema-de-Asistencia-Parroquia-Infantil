@@ -377,15 +377,28 @@ class _CalendarioAdminState extends State<CalendarioAdmin> {
         foregroundColor: Colors.black,
         backgroundColor: CalendarioAdminStyles.backgroundColor,
         elevation: 0,
+
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back_ios_new, size: 26),
           onPressed: () {
             Navigator.pop(context);
           },
         ),
+
+        centerTitle: true,
+
         title: const Text(
           'Calendario de misas',
           style: CalendarioAdminStyles.appBarTitle,
+        ),
+
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(
+            height: 1,
+            thickness: 1,
+            color: CalendarioAdminStyles.amarillo,
+          ),
         ),
       ),
 

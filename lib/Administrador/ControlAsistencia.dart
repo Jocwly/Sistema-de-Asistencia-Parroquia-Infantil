@@ -339,7 +339,7 @@ class _ControlAsistenciaState extends State<ControlAsistencia> {
         ),
       ),
       title: const Text(
-        'Control de Asistencia',
+        'Control de Asistencias',
         style: ControlAsistenciaStyles.tituloAppBar,
       ),
       bottom: const PreferredSize(
@@ -368,21 +368,15 @@ class _ControlAsistenciaState extends State<ControlAsistencia> {
               onLimpiar: _limpiarBusqueda,
             ),
           ),
-
           const SizedBox(height: 10),
-
           Row(
             children: [
               Expanded(child: _construirFiltroFecha()),
-
               const SizedBox(width: 8),
-
               Expanded(child: _construirFiltroNivel()),
             ],
           ),
-
           const SizedBox(height: 10),
-
           _construirFiltroGrupo(),
         ],
       ),
@@ -453,7 +447,6 @@ class _ControlAsistenciaState extends State<ControlAsistencia> {
           onChanged: (valor) {
             setState(() {
               _nivelSeleccionado = valor;
-
               // Cuando cambia el nivel, reinicia el grupo.
               _grupoSeleccionado = 'Todos los grupos';
             });
@@ -465,9 +458,7 @@ class _ControlAsistenciaState extends State<ControlAsistencia> {
 
   Widget _construirFiltroGrupo() {
     final nivelElegido = _nivelSeleccionado != null;
-
     final opciones = ['Todos los grupos', ...gruposDelNivel];
-
     return Container(
       width: double.infinity,
       height: ControlAsistenciaStyles.alturaFiltro,
@@ -507,7 +498,6 @@ class _ControlAsistenciaState extends State<ControlAsistencia> {
                   if (valor == null) {
                     return;
                   }
-
                   setState(() {
                     _grupoSeleccionado = valor;
                   });
@@ -603,7 +593,6 @@ class _ControlAsistenciaState extends State<ControlAsistencia> {
                 ),
               );
             }
-
             return ListView(
               padding: ControlAsistenciaStyles.listaPadding,
               children: [
@@ -812,14 +801,14 @@ class _EtapaAsistencia extends StatelessWidget {
         children: [
           Icon(
             activo ? Icons.check_circle_outline : Icons.close,
-            color: colorContenido,
+            color: Colors.black,
             size: 10,
           ),
           const SizedBox(width: 3),
           Text(
             texto,
             style: ControlAsistenciaStyles.textoEtapa.copyWith(
-              color: colorContenido,
+              color: Colors.black,
             ),
           ),
         ],

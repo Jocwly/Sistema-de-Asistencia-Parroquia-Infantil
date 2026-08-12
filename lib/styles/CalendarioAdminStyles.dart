@@ -104,8 +104,11 @@ class CalendarioAdminStyles {
   }
 
   // Estilos de texto
-  static const TextStyle appBarTitle = TextStyle(fontWeight: FontWeight.bold);
-
+  static const TextStyle appBarTitle = TextStyle(
+    fontWeight: FontWeight.bold,
+    fontSize: 26,
+    color: Colors.black,
+  );
   static const TextStyle dialogTitle = TextStyle(
     fontWeight: FontWeight.bold,
     fontSize: 18,

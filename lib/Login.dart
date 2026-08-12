@@ -17,35 +17,25 @@ class Login extends StatefulWidget {
 
 class _LoginState extends State<Login> {
   final _formKey = GlobalKey<FormState>();
-
   final _userController = TextEditingController();
-
   final _passwordController = TextEditingController();
-
   bool _obscurePassword = true;
-
   bool _isLoading = false;
 
   @override
   void dispose() {
     _userController.dispose();
-
     _passwordController.dispose();
-
     super.dispose();
   }
 
   // OBTENER CORREO INTERNO CUANDO INGRESA TELÉFONO
-
   Future<String?> _obtenerCorreoAuth(String dato) async {
     // Si escribe correo usa ese directamente
-
     if (dato.contains('@')) {
       return dato;
     }
-
     // Si escribe teléfono buscamos en usuarios
-
     final resultado = await FirebaseFirestore.instance
         .collection('usuarios')
         .where('telefono', isEqualTo: dato)
@@ -55,9 +45,7 @@ class _LoginState extends State<Login> {
     if (resultado.docs.isEmpty) {
       return null;
     }
-
     final usuario = resultado.docs.first.data();
-
     return usuario['correoAuth'];
   }
 
@@ -72,23 +60,16 @@ class _LoginState extends State<Login> {
 
     try {
       final dato = _userController.text.trim();
-
       final correoAuth = await _obtenerCorreoAuth(dato);
-
       if (correoAuth == null) {
         throw FirebaseAuthException(code: 'user-not-found');
       }
-
       final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: correoAuth,
-
         password: _passwordController.text.trim(),
       );
-
       if (!mounted) return;
-
       // ADMINISTRADOR
-
       if (credential.user?.email == 'admin@gmail.com') {
         Navigator.pushReplacementNamed(context, InicioAdmin.routeName);
 
@@ -96,7 +77,6 @@ class _LoginState extends State<Login> {
       }
 
       final uid = credential.user!.uid;
-
       final userDoc = await FirebaseFirestore.instance
           .collection('usuarios')
           .doc(uid)
@@ -104,11 +84,9 @@ class _LoginState extends State<Login> {
 
       if (!userDoc.exists) {
         await FirebaseAuth.instance.signOut();
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('No se encontraron datos del usuario'),
-
             backgroundColor: LoginStyles.errorColor,
           ),
         );
@@ -117,27 +95,22 @@ class _LoginState extends State<Login> {
       }
 
       final data = userDoc.data()!;
-
       final rol = data['rol'];
-
       if (rol == 'admin') {
         Navigator.pushReplacementNamed(context, InicioAdmin.routeName);
       } else if (rol == 'alumno') {
         Navigator.pushReplacementNamed(context, InicioAlumno.routeName);
       } else {
         await FirebaseAuth.instance.signOut();
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Rol de usuario no válido'),
-
             backgroundColor: LoginStyles.errorColor,
           ),
         );
       }
     } on FirebaseAuthException catch (e) {
       String mensaje = 'Usuario o contraseña incorrectos';
-
       if (e.code == 'user-not-found') {
         mensaje = 'Usuario no encontrado';
       } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
@@ -145,23 +118,18 @@ class _LoginState extends State<Login> {
       } else if (e.code == 'invalid-email') {
         mensaje = 'Correo inválido';
       }
-
       if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(mensaje),
-
           backgroundColor: LoginStyles.errorColor,
         ),
       );
     } catch (e) {
       if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error: $e'),
-
           backgroundColor: LoginStyles.errorColor,
         ),
       );
@@ -178,43 +146,29 @@ class _LoginState extends State<Login> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 255, 255, 255),
-
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: LoginStyles.pagePadding,
-
             child: Form(
               key: _formKey,
-
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-
                 children: [
                   LoginStyles.logoIcon(),
-
                   const SizedBox(height: LoginStyles.titleSpacing),
-
                   Text(
-                    'Sistema de Asistencia Parroquia Infantil',
-
+                    'Sistema de Asistencia Parroquial Infantil',
                     textAlign: TextAlign.center,
-
                     style: LoginStyles.titleStyle(context),
                   ),
-
                   const SizedBox(height: LoginStyles.titleSpacing),
-
                   const Text(
                     'Inicia Sesión',
-
                     textAlign: TextAlign.center,
-
                     style: TextStyle(
                       fontSize: 25,
-
                       fontWeight: FontWeight.bold,
-
                       color: Colors.black,
                     ),
                   ),
