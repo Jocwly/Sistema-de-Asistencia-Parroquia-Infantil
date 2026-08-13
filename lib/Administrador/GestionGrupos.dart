@@ -210,7 +210,6 @@ class _Header extends StatelessWidget {
           Expanded(
             child: Center(child: Text('Grupos', style: GruposStyles.title)),
           ),
-          // Este espacio mantiene el título centrado.
           const SizedBox(width: 48),
         ],
       ),

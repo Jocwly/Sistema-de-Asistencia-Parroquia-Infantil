@@ -722,14 +722,11 @@ class _InicioAlumnoState extends State<InicioAlumno> {
 
                         const SizedBox(height: 18),
 
-                        // Los botones ahora forman parte del contenido
-                        // desplazable de la pantalla.
                         _barraNavegacionInferior(),
 
                         const SizedBox(height: 18),
 
-                        // El recuadro se muestra debajo de los botones.
-                        _ultimasAsistencias(asistencias: ultimasAsistencias),
+                       _ultimasAsistencias(asistencias: ultimasAsistencias),
 
                         const SizedBox(height: 24),
                       ],

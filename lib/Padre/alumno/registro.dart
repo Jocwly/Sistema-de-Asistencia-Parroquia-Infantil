@@ -94,11 +94,11 @@ class _RegistroState extends State<Registro> {
     try {
       String correoAuth;
 
-      // Si tiene correo usa su correo real
+     
       if (correo.isNotEmpty) {
         correoAuth = correo;
       }
-      // Si solo tiene teléfono crea correo interno
+   
       else {
         correoAuth = '$telefono@sapi.com';
       }
@@ -115,23 +115,13 @@ class _RegistroState extends State<Registro> {
           .doc(credential.user!.uid)
           .set({
             'uid': credential.user!.uid,
-
             'nombre': _nombreController.text.trim(),
-
             'apellidos': _apellidosController.text.trim(),
-
             'edad': int.parse(_edadController.text.trim()),
-
             'nivel': _nivelSeleccionado,
-
             'grupo': _grupoSeleccionado,
-
-            // Datos visibles
             'correo': correo,
-
             'telefono': telefono,
-
-            // Dato interno de Firebase Auth
             'correoAuth': correoAuth,
 
             'rol': 'alumno',
@@ -237,7 +227,7 @@ class _RegistroState extends State<Registro> {
                     style: LoginStyles.titleStyle(context),
                   ),
                   const SizedBox(height: LoginStyles.sectionSpacing),
-                  // NOMBRE
+              
                   TextFormField(
                     controller: _nombreController,
                     inputFormatters: [
@@ -267,8 +257,6 @@ class _RegistroState extends State<Registro> {
                   ),
 
                   const SizedBox(height: LoginStyles.fieldSpacing),
-
-                  // APELLIDOS
                   TextFormField(
                     controller: _apellidosController,
 
@@ -307,7 +295,6 @@ class _RegistroState extends State<Registro> {
 
                   const SizedBox(height: LoginStyles.fieldSpacing),
 
-                  // EDAD
                   TextFormField(
                     controller: _edadController,
 
@@ -352,7 +339,6 @@ class _RegistroState extends State<Registro> {
 
                   const SizedBox(height: LoginStyles.fieldSpacing),
 
-                  // NIVEL
                   DropdownButtonFormField<String>(
                     value: _nivelSeleccionado,
 
@@ -434,7 +420,6 @@ class _RegistroState extends State<Registro> {
 
                   const SizedBox(height: LoginStyles.fieldSpacing),
 
-                  // TELEFONO NUEVO
                   TextFormField(
                     controller: _telefonoController,
 
@@ -474,7 +459,6 @@ class _RegistroState extends State<Registro> {
                   ),
                   const SizedBox(height: LoginStyles.fieldSpacing),
 
-                  // CONTRASEÑA
                   TextFormField(
                     controller: _passwordController,
 

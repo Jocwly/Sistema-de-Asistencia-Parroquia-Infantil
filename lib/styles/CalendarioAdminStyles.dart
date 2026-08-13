@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class CalendarioAdminStyles {
   CalendarioAdminStyles._();
 
-  // Colores principales
+  
   static const Color backgroundColor = Colors.white;
   static const Color amarillo = Color(0xFFFFD814);
   static const Color amarilloClaro = Color(0xFFFFF7C7);
@@ -15,7 +15,7 @@ class CalendarioAdminStyles {
   static const Color fondoMisa = Color(0xFFFFFBE8);
   static const Color textoInformativo = Color(0xFF9A7B00);
 
-  // Espaciados
+  
   static const EdgeInsets screenPadding = EdgeInsets.all(12);
   static const EdgeInsets leyendaPadding = EdgeInsets.all(12);
 
@@ -29,25 +29,25 @@ class CalendarioAdminStyles {
   static const EdgeInsets misasPadding = EdgeInsets.all(14);
   static const EdgeInsets misaItemPadding = EdgeInsets.all(10);
 
-  // Radios
+  
   static const double cardRadius = 15;
   static const double dialogRadius = 18;
   static const double inputRadius = 14;
   static const double misaItemRadius = 12;
 
-  // Tamaños
+
   static const double botonMesSize = 38;
   static const double diaSize = 38;
   static const double indicadorLeyendaSize = 17;
   static const double numeroMisaSize = 35;
   static const double contadorSize = 20;
 
-  // Bordes
+
   static Border cardBorder = Border.all(color: borde);
 
   static Border misaEspecialBorder = Border.all(color: borde, width: 1.5);
 
-  // Decoraciones
+ 
   static BoxDecoration get cardDecoration {
     return BoxDecoration(
       color: backgroundColor,
@@ -103,7 +103,6 @@ class CalendarioAdminStyles {
     );
   }
 
-  // Estilos de texto
   static const TextStyle appBarTitle = TextStyle(
     fontWeight: FontWeight.bold,
     fontSize: 26,
@@ -174,7 +173,6 @@ class CalendarioAdminStyles {
     );
   }
 
-  // Estilos de componentes
   static InputDecoration massInputDecoration() {
     return InputDecoration(
       labelText: 'Nombre de la misa',

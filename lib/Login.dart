@@ -29,13 +29,11 @@ class _LoginState extends State<Login> {
     super.dispose();
   }
 
-  // OBTENER CORREO INTERNO CUANDO INGRESA TELÉFONO
+
   Future<String?> _obtenerCorreoAuth(String dato) async {
-    // Si escribe correo usa ese directamente
     if (dato.contains('@')) {
       return dato;
     }
-    // Si escribe teléfono buscamos en usuarios
     final resultado = await FirebaseFirestore.instance
         .collection('usuarios')
         .where('telefono', isEqualTo: dato)
@@ -69,7 +67,6 @@ class _LoginState extends State<Login> {
         password: _passwordController.text.trim(),
       );
       if (!mounted) return;
-      // ADMINISTRADOR
       if (credential.user?.email == 'admin@gmail.com') {
         Navigator.pushReplacementNamed(context, InicioAdmin.routeName);
 

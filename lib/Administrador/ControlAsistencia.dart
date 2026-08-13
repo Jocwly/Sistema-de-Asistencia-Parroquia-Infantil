@@ -62,10 +62,9 @@ class _ControlAsistenciaState extends State<ControlAsistencia> {
     } else if (valor is DateTime) {
       fecha = valor;
     } else if (valor is String) {
-      // Intenta convertir formatos como 2026-07-16
+
       fecha = DateTime.tryParse(valor);
 
-      // Intenta convertir formatos como 16/07/2026
       if (fecha == null) {
         final partes = valor.split('/');
 
@@ -85,7 +84,6 @@ class _ControlAsistenciaState extends State<ControlAsistencia> {
       return null;
     }
 
-    // Convierte a hora local y elimina la hora.
     final fechaLocal = fecha.toLocal();
 
     return DateTime(fechaLocal.year, fechaLocal.month, fechaLocal.day);
@@ -447,7 +445,6 @@ class _ControlAsistenciaState extends State<ControlAsistencia> {
           onChanged: (valor) {
             setState(() {
               _nivelSeleccionado = valor;
-              // Cuando cambia el nivel, reinicia el grupo.
               _grupoSeleccionado = 'Todos los grupos';
             });
           },

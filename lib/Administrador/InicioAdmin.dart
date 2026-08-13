@@ -648,8 +648,6 @@ class _AsistenciaRecienteConUsuario extends StatelessWidget {
   Widget build(BuildContext context) {
     final uidAlumno = datosAsistencia['uidAlumno']?.toString().trim() ?? '';
 
-    // Si la asistencia no tiene alumno asociado,
-    // ya no se muestra
     if (uidAlumno.isEmpty) {
       return const SizedBox();
     }
@@ -660,15 +658,13 @@ class _AsistenciaRecienteConUsuario extends StatelessWidget {
           .doc(uidAlumno)
           .snapshots(),
       builder: (context, snapshot) {
-        // Mientras busca el usuario no muestra datos viejos
+
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const SizedBox();
         }
 
         final usuario = snapshot.data?.data();
 
-        // Si el alumno ya no existe en usuarios,
-        // elimina visualmente la asistencia
         if (usuario == null) {
           return const SizedBox();
         }

@@ -3,9 +3,6 @@ import 'package:flutter/material.dart';
 class GenerarReportesStyles {
   GenerarReportesStyles._();
 
-  // ============================================================
-  // COLORES
-  // ============================================================
 
   static const Color backgroundColor = Color(0xFFF8F8F8);
   static const Color cardColor = Colors.white;
@@ -27,9 +24,6 @@ class GenerarReportesStyles {
   static const Color rojoSuave = Color(0xFFFFDCDC);
   static const Color rojoTexto = Color(0xFFFF2222);
 
-  // ============================================================
-  // TAMAÑOS GENERALES
-  // ============================================================
 
   static const double radioTarjeta = 15;
   static const double radioCampo = 14;
@@ -38,9 +32,6 @@ class GenerarReportesStyles {
   static const double alturaCampo = 48;
   static const double alturaBoton = 48;
 
-  // ============================================================
-  // PADDING
-  // ============================================================
 
   static const EdgeInsets screenPadding = EdgeInsets.fromLTRB(16, 18, 16, 20);
 
@@ -55,9 +46,7 @@ class GenerarReportesStyles {
 
   static const EdgeInsets registroPadding = EdgeInsets.all(10);
 
-  // ============================================================
-  // APPBAR
-  // ============================================================
+  
 
   static const TextStyle appBarTitle = TextStyle(
     color: Colors.black,
@@ -65,9 +54,6 @@ class GenerarReportesStyles {
     fontWeight: FontWeight.w800,
   );
 
-  // ============================================================
-  // TEXTOS
-  // ============================================================
 
   static const TextStyle sectionTitle = TextStyle(
     fontSize: 24,
@@ -108,9 +94,7 @@ class GenerarReportesStyles {
     color: Colors.black54,
   );
 
-  // ============================================================
-  // DECORACIONES
-  // ============================================================
+  
 
   static BoxDecoration get configuracionDecoration {
     return BoxDecoration(
@@ -136,9 +120,6 @@ class GenerarReportesStyles {
     );
   }
 
-  // ============================================================
-  // INPUTS / DROPDOWNS
-  // ============================================================
 
   static InputDecoration dropdownDecoration() {
     return InputDecoration(
@@ -159,9 +140,7 @@ class GenerarReportesStyles {
     );
   }
 
-  // ============================================================
-  // BOTONES
-  // ============================================================
+
 
   static ButtonStyle get generarButtonStyle {
     return ElevatedButton.styleFrom(

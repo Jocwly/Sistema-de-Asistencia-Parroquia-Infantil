@@ -21,7 +21,7 @@ class MisasService {
   static Future<MisaProgramada> obtenerMisaProgramada(DateTime fecha) async {
     final dia = DateTime(fecha.year, fecha.month, fecha.day);
 
-    // Todos los domingos tienen misa automáticamente.
+  
     if (dia.weekday == DateTime.sunday) {
       return const MisaProgramada(
         existe: true,

@@ -28,9 +28,7 @@ class ControlAsistenciaStyles {
   static const Color estadoParcial = Color(0xFFE5A100);
   static const Color fondoEstadoParcial = Color(0xFFFFF0C7);
 
-  // =========================
-  // ESPACIADOS
-  // =========================
+
 
   static const EdgeInsets filtroPadding = EdgeInsets.fromLTRB(16, 12, 16, 10);
 
@@ -53,9 +51,6 @@ class ControlAsistenciaStyles {
     vertical: 4,
   );
 
-  // =========================
-  // TAMAÑOS
-  // =========================
 
   static const double alturaFiltro = 45;
   static const double radioCampo = 13;
@@ -65,10 +60,7 @@ class ControlAsistenciaStyles {
   static const double alturaEtapa = 25;
   static const double radioAvatar = 18;
 
-  // =========================
-  // ESTILOS DE TEXTO
-  // =========================
-
+ 
   static const TextStyle tituloAppBar = TextStyle(
     color: negro,
     fontWeight: FontWeight.w800,

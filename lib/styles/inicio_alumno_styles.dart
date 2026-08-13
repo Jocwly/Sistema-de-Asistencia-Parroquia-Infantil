@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
 class InicioAlumnoStyles {
-  // Colores principales
+
   static const Color backgroundColor = Color.fromARGB(
     255,
     255,
     255,
     255,
-  ); //Color(0xFFF9F9F9);
+  ); 
   static const Color primaryYellow = Color(0xFFFFC400);
   static const Color lightYellow = Color(0xFFFFF08A);
   static const Color borderYellow = Color(0xFFFFC400);
@@ -23,7 +23,7 @@ class InicioAlumnoStyles {
 
   static const Color dividerColor = Color(0xFFE9E9E9);
 
-  // Espaciados
+
   static const EdgeInsets screenPadding = EdgeInsets.symmetric(
     horizontal: 10,
     vertical: 8,
@@ -34,7 +34,7 @@ class InicioAlumnoStyles {
     vertical: 22,
   );
 
-  // Textos
+
   static const TextStyle logoText = TextStyle(
     fontSize: 23,
     fontWeight: FontWeight.w900,
@@ -95,7 +95,7 @@ class InicioAlumnoStyles {
     color: textPrimary,
   );
 
-  // Decoraciones
+  
   static BoxDecoration get sundayCardDecoration {
     return BoxDecoration(
       color: Colors.white,

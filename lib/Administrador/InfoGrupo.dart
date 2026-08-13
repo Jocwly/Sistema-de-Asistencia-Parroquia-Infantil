@@ -294,17 +294,17 @@ class _AlumnoItemState extends State<_AlumnoItem> {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
 
-      // Comienza a contar los dos segundos.
+
       onTapDown: (_) {
         _iniciarPresionado();
       },
 
-      // Si levanta el dedo antes, se cancela.
+   
       onTapUp: (_) {
         _cancelarPresionado();
       },
 
-      // También se cancela si mueve el dedo o hace scroll.
+ 
       onTapCancel: () {
         _cancelarPresionado();
       },

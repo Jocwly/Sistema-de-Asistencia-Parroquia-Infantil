@@ -19,13 +19,13 @@ class _RegistrarAsistenciaState extends State<RegistrarAsistencia> {
   bool _isUploading = false;
   String? _photoSending;
 
-  // Indica si todavía se está consultando Firestore.
+
   bool _verificandoDiaMisa = true;
 
-  // Indica si hoy es domingo o hay una misa especial.
+
   bool _esDiaDeMisa = false;
 
-  // Mensaje que se mostrará en la pantalla.
+
   String _mensajeDiaMisa = '';
 
   MisaProgramada? _misaDeHoy;
@@ -95,10 +95,7 @@ class _RegistrarAsistenciaState extends State<RegistrarAsistencia> {
     return '${uid}_${_fechaId(fecha)}';
   }
 
-  /// Comprueba si el alumno puede registrar asistencia hoy.
-  ///
-  /// Se permite cuando hoy es domingo o existe una misa especial
-  /// registrada por el administrador en la colección misas_especiales.
+
   Future<void> _verificarDiaDeMisa() async {
     if (mounted) {
       setState(() {
@@ -377,8 +374,6 @@ class _RegistrarAsistenciaState extends State<RegistrarAsistencia> {
     }
   }
 
-  /// Realiza una segunda comprobación justo antes de escribir
-  /// la evidencia en la colección asistencias.
   Future<bool> _confirmarDiaDeMisaAntesDeEnviar() async {
     try {
       final misa = await MisasService.obtenerMisaProgramada(DateTime.now());

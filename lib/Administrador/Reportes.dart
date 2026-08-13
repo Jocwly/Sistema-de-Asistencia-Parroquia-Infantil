@@ -68,7 +68,7 @@ class _GenerarReportesState extends State<GenerarReportes> {
     });
 
     try {
-      // Obtiene los datos actuales de los alumnos.
+
       final snapshotUsuarios = await _firestore.collection('usuarios').get();
 
       final Map<String, Map<String, dynamic>> usuariosPorUid = {};
@@ -96,8 +96,6 @@ class _GenerarReportesState extends State<GenerarReportes> {
 
         final usuarioActual = usuariosPorUid[uidAlumno];
 
-        // Primero toma el grupo actual del usuario.
-        // Si no encuentra el usuario, usa el grupo guardado en la asistencia.
         final grupoActual = usuarioActual == null
             ? ''
             : _leerTexto(usuarioActual, ['grupo']);
@@ -383,9 +381,6 @@ class _GenerarReportesState extends State<GenerarReportes> {
     });
   }
 
-  // ---------------------------------------------------------------------------
-  // SELECTOR DE FECHA
-  // ---------------------------------------------------------------------------
 
   Future<void> _seleccionarFecha() async {
     final fecha = await showDatePicker(

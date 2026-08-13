@@ -51,7 +51,6 @@ class _CalendarioAdminState extends State<CalendarioAdmin> {
     final hoy = _normalizarFecha(DateTime.now());
     final fechaNormalizada = _normalizarFecha(fecha);
 
-    // Solo se permiten días posteriores a hoy.
     return !fechaNormalizada.isAfter(hoy);
   }
 

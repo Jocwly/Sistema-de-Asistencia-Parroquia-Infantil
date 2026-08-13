@@ -12,7 +12,6 @@ class InicioAdminStyles {
 
   static const Color naranja = Color(0xFFFF9500);
 
-  // Un poco más negro
   static const Color textoPrincipal = Color(0xFF080808);
 
   static const Color textoSecundario = Color(0xFF777777);
@@ -27,7 +26,6 @@ class InicioAdminStyles {
   static const Color rojo = Color(0xFFFF6B6B);
   static const Color rojoClaro = Color(0xFFFFDEDE);
 
-  // Más espacio en la parte superior
   static const EdgeInsets paddingPantalla = EdgeInsets.fromLTRB(16, 30, 16, 16);
 
   static const TextStyle tituloPrincipal = TextStyle(

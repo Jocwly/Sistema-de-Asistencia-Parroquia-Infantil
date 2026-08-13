@@ -105,7 +105,7 @@ class _CalendarioState extends State<Calendario> {
 
     final eventos = <EventoMisa>[];
 
-    // Agrega los domingos automáticamente.
+
     for (final domingo in domingos) {
       eventos.add(
         EventoMisa(
@@ -117,7 +117,6 @@ class _CalendarioState extends State<Calendario> {
       );
     }
 
-    // Agrega las misas especiales registradas por el administrador.
     for (final misa in misasEspeciales) {
       eventos.add(
         EventoMisa(
@@ -129,7 +128,6 @@ class _CalendarioState extends State<Calendario> {
       );
     }
 
-    // Ordena todo por fecha.
     eventos.sort((a, b) {
       final comparacionFecha = a.fecha.compareTo(b.fecha);
 
